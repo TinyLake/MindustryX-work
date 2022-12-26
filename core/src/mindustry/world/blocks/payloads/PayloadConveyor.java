@@ -154,7 +154,10 @@ public class PayloadConveyor extends Block{
                 if(valid && stepAccepted != curStep && item != null){
                     if(next != null){
                         //trigger update forward
-                        next.updateTile();
+                        //MDTX: fix NPE bug, copy from PayloadRouter.PayloadRouterBuild.pickNext
+                        if(next instanceof PayloadConveyorBuild){
+                            next.updateTile();//Update for progress??
+                        }
 
                         //TODO add self to queue of next conveyor, then check if this conveyor was selected next frame - selection happens deterministically
                         if(next != null && next.acceptPayload(this, item)){
