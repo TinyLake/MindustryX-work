@@ -1,17 +1,18 @@
-buildscript{
-    repositories{
-        mavenLocal()
-        mavenCentral()
-        google()
-        maven{ url "https://oss.sonatype.org/content/repositories/snapshots/" }
-    }
-
-    dependencies{
-        classpath 'com.android.tools.build:gradle:8.2.2'
-    }
+plugins{
+    id("com.android.application") version "8.3.1"
 }
 
-apply plugin: "com.android.application"
+ext{
+    findSdkDir = {
+        //null because IntelliJ doesn't get env variables
+        def v = System.getenv("ANDROID_HOME")
+        if(v != null) return v
+        //rootDir is null here, amazing. brilliant.
+        def file = new File(rootDir, "local.properties")
+        def props = new Properties().with{ p -> p.load(file.newReader()); return p }
+        return props.get("sdk.dir")
+    }
+}
 
 configurations{ natives }
 
@@ -20,16 +21,8 @@ repositories{
     maven{ url "https://maven.google.com" }
 }
 
-task deploy(type: Copy){
-    dependsOn "assembleRelease"
-
-    from "build/outputs/apk/release/android-release.apk"
-    into "../deploy/"
-    rename("android-release.apk", "${generateDeployName('android')}.apk")
-}
-
 android{
-    namespace = "io.anuke.mindustry"
+    namespace = "com.github.tinylake.mindustryX"
     buildToolsVersion = '34.0.0'
     compileSdk = 34
     sourceSets{
@@ -51,8 +44,6 @@ android{
     }
 
     defaultConfig{
-        Properties props = loadVersionProps()
-        Integer vcode = props['androidBuildCode']?.toInteger() ?: 1
         def versionNameResult = "$versionNumber-$versionType-${getBuildVersion().replace(" ", "-")}"
 
         applicationId "io.anuke.mindustry"
@@ -60,14 +51,16 @@ android{
         targetSdkVersion 34
         
         versionName versionNameResult
-        versionCode = vcode
+        versionCode = 1
+        multiDexEnabled true
 
         if(project.hasProperty("release")){
+            Properties props = loadVersionProps()
+            Integer vcode = props['androidBuildCode']?.toInteger() ?: 1
+            versionCode = vcode
             props['androidBuildCode'] = (vcode + 1).toString()
+            props.store(file('../core/assets/version.properties').newWriter(), null)
         }
-        props.store(file('../core/assets/version.properties').newWriter(), null)
-
-        multiDexEnabled true
     }
 
     compileOptions{
@@ -122,8 +115,8 @@ dependencies{
     implementation arcModule("backends:backend-android")
     implementation 'com.jakewharton.android.repackaged:dalvik-dx:9.0.0_r3'
 
-    natives "com.github.Anuken.Arc:natives-android:$arcHash"
-    natives "com.github.Anuken.Arc:natives-freetype-android:$arcHash"
+    natives arcModule("natives-android")
+    natives arcModule("natives-freetype-android")
 
     def version;
     def highestVersion;
@@ -136,24 +129,25 @@ dependencies{
     if(sdkFile.exists()) compileOnly files(sdkFile.absolutePath)
 }
 
-task copyAndroidNatives(){
-    configurations.natives.files.each{ jar ->
-        copy{
-            from zipTree(jar)
-            into file("libs/")
-            include "**"
-        }
+tasks.register('copyAndroidNatives', Copy){
+    from(configurations.natives.collect{ zipTree(it) }){
+        exclude("META-INF/**")
     }
+    into file("libs/")
 }
 
-task run(type: Exec){
+tasks.register('run', Exec){
     commandLine "${findSdkDir()}/platform-tools/adb", 'shell', 'am', 'start', '-n', 'io.anuke.mindustry/mindustry.android.AndroidLauncher'
 }
 
-if(!project.ext.hasSprites()){
-    tasks.whenTaskAdded{ task ->
-        if(task.name == 'assembleDebug' || task.name == 'assembleRelease'){
-            task.dependsOn ":tools:pack"
-        }
+tasks.configureEach{ task ->
+    if(task.name == 'mergeDebugAssets' || task.name == 'mergeReleaseAssets' || task.name == 'lintVitalAnalyzeRelease' || task.name == 'generateReleaseLintVitalReportModel'){
+        task.dependsOn ":core:allAssets"
+    }
+    if(task.name == 'mergeDebugJniLibFolders' || task.name == 'mergeReleaseJniLibFolders'){
+        task.dependsOn "copyAndroidNatives"
+    }
+    if(task.name == 'mergeReleaseAssets' || task.name == 'compressReleaseAssets'){
+        task.outputs.doNotCacheIf("Not worth caching"){ true }
     }
 }
