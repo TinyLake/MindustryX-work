@@ -1,8 +1,16 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+    }
+}
+
 if(JavaVersion.current().ordinal() < JavaVersion.VERSION_16.ordinal()){
     throw new Exception("!!! YOU MUST USE JAVA 16 OR ABOVE TO COMPILE AND RUN MINDUSTRY !!! Read the README. Your version: ${System.properties["java.version"]}")
 }
 
-include 'desktop', 'core', 'server', 'ios', 'annotations', 'tools', 'tests'
+include 'core', 'server', 'annotations', 'tools', 'tests'
+include 'desktop', 'ios'
 
 def hasSdk = System.getenv("ANDROID_HOME") != null
 
