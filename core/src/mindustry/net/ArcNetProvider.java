@@ -16,6 +16,7 @@ import mindustry.game.EventType.*;
 import mindustry.net.Administration.*;
 import mindustry.net.Net.*;
 import mindustry.net.Packets.*;
+import mindustryX.events.*;
 import net.jpountz.lz4.*;
 
 import java.io.*;
@@ -335,6 +336,7 @@ public class ArcNetProvider implements NetProvider{
 
         @Override
         public void sendStream(Streamable stream){
+            if(SendPacketEvent.emit(this, null, stream)) return;
             connection.addListener(new InputStreamSender(stream.stream, 1024){
                 int id;
 
@@ -360,6 +362,7 @@ public class ArcNetProvider implements NetProvider{
 
         @Override
         public void send(Object object, boolean reliable){
+            if(SendPacketEvent.emit(this, null, object)) return;
             try{
                 if(reliable){
                     connection.sendTCP(object);
