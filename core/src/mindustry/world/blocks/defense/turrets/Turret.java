@@ -362,6 +362,18 @@ public class Turret extends ReloadTurret{
             drawer.draw(this);
         }
 
+        //show shoot target line
+        @Override
+        public void drawSelect(){
+            super.drawSelect();
+            if(!targetPos.isZero() && dst(targetPos) < range * 5){
+                Lines.stroke(1f);
+                Lines.dashLine(x, y, targetPos.x, targetPos.y, (int)(Mathf.len(targetPos.x - x, targetPos.y - y) / 8));
+                Lines.dashCircle(targetPos.x, targetPos.y, 8);
+                Draw.reset();
+            }
+        }
+
         @Override
         public void updateTile(){
             if(!validateTarget()) target = null;

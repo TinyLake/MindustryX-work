@@ -41,6 +41,7 @@ import mindustry.world.blocks.power.*;
 import mindustry.world.consumers.*;
 import mindustry.world.meta.*;
 import mindustry.world.modules.*;
+import mindustryX.features.*;
 
 import java.util.*;
 
@@ -77,6 +78,7 @@ abstract class BuildingComp implements Posc, Teamc, Healthc, Buildingc, Timerc, 
 
     transient boolean enabled = true;
     transient @Nullable Building lastDisabler;
+    transient @Nullable Building lastLogicController;
 
     @Nullable PowerModule power;
     @Nullable ItemModule items;
@@ -1421,7 +1423,8 @@ abstract class BuildingComp implements Posc, Teamc, Healthc, Buildingc, Timerc, 
         //derelict team icon currently doesn't display
         return team == Team.derelict ?
             block.localizedName + "\n" + Core.bundle.get("block.derelict") :
-            block.localizedName + (team == player.team() || team.emoji.isEmpty() ? "" : " " + team.emoji);
+                "[#" + team.color + "]" + (Core.settings.getBool("colorizedContent") && block.localizedName.length() > 11 ? block.localizedName.substring(11) : block.localizedName) + (team == player.team() || team.emoji.isEmpty() ? "" : " " + team.emoji
+                + (team.id > 5 ? "[" + team.id + "]" : ""));
     }
 
     public TextureRegion getDisplayIcon(){
@@ -1445,7 +1448,7 @@ abstract class BuildingComp implements Posc, Teamc, Healthc, Buildingc, Timerc, 
         table.row();
 
         //only display everything else if the team is the same
-        if(team == player.team()){
+        if(team == player.team() || RenderExt.showOtherInfo){
             table.table(bars -> {
                 bars.defaults().growX().height(18f).pad(4);
 
@@ -1546,6 +1549,15 @@ abstract class BuildingComp implements Posc, Teamc, Healthc, Buildingc, Timerc, 
             table.add(result).growX();
             table.row();
         }
+        if (lastLogicController != null) {
+            table.add(lastLogicController.block.emoji() + " [lightgray](" + lastLogicController.tileX() + ", " + lastLogicController.tileY() + ")").growX().left().row();
+        }
+        if (Time.time < healSuppressionTime){
+            table.add("\uF89B[red]\uE815").update(label -> {
+                if (healSuppressionTime > 0) label.setText("\uF89B[red]\uE815 [white]~ " + UI.formatTime(healSuppressionTime - Time.time));
+                else label.visible = false;
+            }).row();
+        }
     }
 
      /** Called when this block is tapped to build a UI on the table.
@@ -1561,7 +1573,7 @@ abstract class BuildingComp implements Posc, Teamc, Healthc, Buildingc, Timerc, 
 
     /** Returns whether a hand cursor should be shown over this block. */
     public Cursor getCursor(){
-        return block.configurable && interactable(player.team()) ? SystemCursor.hand : SystemCursor.arrow;
+        return block.configurable && (RenderExt.showOtherInfo || interactable(player.team())) ? SystemCursor.hand : SystemCursor.arrow;
     }
 
     /**

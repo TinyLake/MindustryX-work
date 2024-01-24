@@ -18,7 +18,6 @@ import mindustry.logic.*;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.*;
-import mindustry.world.blocks.environment.*;
 import mindustry.world.consumers.*;
 import mindustry.world.meta.*;
 import mindustryX.features.*;
@@ -146,12 +145,12 @@ public class Drill extends Block{
         countOre(tile);
 
         if(returnItem != null){
-            float width = drawPlaceText(Core.bundle.formatFloat("bar.drillspeed", 60f / getDrillTime(returnItem) * returnCount, 2), x, y, valid);
-            float dx = x * tilesize + offset - width/2f - 4f, dy = y * tilesize + offset + size * tilesize / 2f + 5, s = iconSmall / 4f;
-            Draw.mixcol(Color.darkGray, 1f);
-            Draw.rect(returnItem.fullIcon, dx, dy - 1, s, s);
-            Draw.reset();
-            Draw.rect(returnItem.fullIcon, dx, dy, s, s);
+            //MDTX ARC: 改变挖掘速度显示, 增加冷却加成速度.
+            float speed = 60f / getDrillTime(returnItem) * returnCount;
+            String msg = liquidBoostIntensity > 1
+            ? Strings.format("@ [white]@@[] @[white]([cyan]@[])", Iconc.production, returnItem.emoji(), returnItem.localizedName, Strings.autoFixed(speed, 2), Strings.autoFixed(speed * liquidBoostIntensity * liquidBoostIntensity, 2))
+            : Strings.format("@ [white]@@[] @", Iconc.production, returnItem.emoji(), returnItem.localizedName, Strings.autoFixed(speed, 2));
+            drawPlaceText(msg, x, y, valid);
 
             if(drawMineItem){
                 Draw.color(returnItem.color);
@@ -162,7 +161,10 @@ public class Drill extends Block{
             Tile to = tile.getLinkedTilesAs(this, tempTiles).find(t -> t.drop() != null && (t.drop().hardness > tier || t.drop() == blockedItem));
             Item item = to == null ? null : to.drop();
             if(item != null){
-                drawPlaceText(Core.bundle.get("bar.drilltierreq"), x, y, valid);
+                if (item == blockedItem) {
+                    drawPlaceText(Core.bundle.format("bar.drillcantmine"), x, y, valid);
+                }
+                else drawPlaceText(Core.bundle.format("bar.drilltierreq", item.hardness, tier), x, y, valid);
             }
         }
     }
@@ -190,6 +192,11 @@ public class Drill extends Block{
     @Override
     public TextureRegion[] icons(){
         return new TextureRegion[]{region, rotatorRegion, topRegion};
+    }
+
+    public int countOreArc(Tile tile){
+        countOre(tile);
+        return returnCount;
     }
 
     protected void countOre(Tile tile){

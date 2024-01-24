@@ -1,6 +1,7 @@
 package mindustry.world.blocks.defense;
 
 import arc.*;
+import arc.Core;
 import arc.func.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
@@ -124,6 +125,7 @@ public class ForceProjector extends Block{
         Draw.color(player.team().color);
         Lines.stroke(1f);
         Lines.poly(x * tilesize + offset, y * tilesize + offset, sides, radius, shieldRotation);
+        Lines.poly(x * tilesize + offset, y * tilesize + offset, sides, radius + phaseRadiusBoost, shieldRotation);
         Draw.color();
     }
 

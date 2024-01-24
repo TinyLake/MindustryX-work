@@ -368,7 +368,7 @@ public class Block extends UnlockableContent implements Senseable{
     /** Map of bars by name. */
     protected OrderedMap<String, Func<Building, Bar>> barMap = new OrderedMap<>();
     /** List for building up consumption before init(). */
-    protected Seq<Consume> consumeBuilder = new Seq<>();
+    public Seq<Consume> consumeBuilder = new Seq<>();
 
     protected TextureRegion[] generatedIcons;
     protected TextureRegion[] editorVariantRegions;
@@ -498,6 +498,11 @@ public class Block extends UnlockableContent implements Senseable{
             .sumf(other -> !floating && other.floor().isDeep() ? 0 : other.floor().attributes.get(attr));
     }
 
+    public float sumAttribute(@Nullable Attribute attr, Tile tile){
+        if(attr == null) return 0;
+        return tile.getLinkedTilesAs(this, tempTiles)
+                .sumf(other -> !floating && other.floor().isDeep() ? 0 : other.floor().attributes.get(attr));
+    }
     public TextureRegion getDisplayIcon(Tile tile){
         return tile.build == null ? uiIcon : tile.build.getDisplayIcon();
     }
@@ -554,7 +559,7 @@ public class Block extends UnlockableContent implements Senseable{
             }
         }
 
-        if(requirements.length > 0){
+        if(canBeBuilt() && requirements.length > 0){
             stats.add(Stat.buildTime, buildCost / 60, StatUnit.seconds);
             stats.add(Stat.buildCost, StatValues.items(false, requirements));
         }
@@ -728,7 +733,12 @@ public class Block extends UnlockableContent implements Senseable{
 
     public void drawPlan(BuildPlan plan, Eachable<BuildPlan> list, boolean valid, float alpha){
         Draw.reset();
-        Draw.mixcol(!valid ? Pal.breakInvalid : Color.white, (!valid ? 0.4f : 0.24f) + Mathf.absin(Time.globalTime, 6f, 0.28f));
+        if (!valid)  Draw.mixcol(Pal.breakInvalid, 0.4f + Mathf.absin(Time.globalTime, 6f, 0.28f));
+        else {
+            if (player.unit().within(plan.x * tilesize,plan.y * tilesize,player.unit().type.buildRange))
+                Draw.mixcol(Color.white, 0.24f + Mathf.absin(Time.globalTime, 6f, 0.28f));
+            else Draw.mixcol(Color.valueOf("#FFE4B5"), 0.33f + Mathf.absin(Time.globalTime, 6f, 0.28f));
+        }
         Draw.alpha(alpha);
         float prevScale = Draw.scl;
         Draw.scl *= plan.animScale;
@@ -915,7 +925,7 @@ public class Block extends UnlockableContent implements Senseable{
     }
 
     public boolean isPlaceable(){
-        return isVisible() && (!state.rules.isBanned(this) || state.rules.editor) && supportsEnv(state.rules.env);
+        return AdvanceToolTable.allBlocksReveal || isVisible() && (!state.rules.isBanned(this) || state.rules.editor) && supportsEnv(state.rules.env);
     }
 
     /** @return whether this block supports a specific environment. */

@@ -10,14 +10,16 @@ import arc.scene.ui.ImageButton.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
 import arc.util.*;
-import mindustry.game.*;
+import mindustry.game.Team;
+import mindustry.input.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
-import mindustry.input.*;
 import mindustry.net.*;
 import mindustry.net.Packets.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
+import mindustryX.features.*;
+import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
 
@@ -68,7 +70,7 @@ public class PlayerListFragment{
                     menu.button("@close", this::toggle);
                 }).margin(0f).pad(10f).growX();
 
-            }).touchable(Touchable.enabled).margin(14f).minWidth(360f);
+            }).touchable(Touchable.enabled).margin(14f).minWidth(620f);
         });
 
         rebuild();
@@ -79,7 +81,7 @@ public class PlayerListFragment{
 
         content.clear();
 
-        float h = 50f;
+        float h = 40f;
         boolean found = false;
 
         players.clear();
@@ -87,7 +89,7 @@ public class PlayerListFragment{
 
         players.sort(Structs.comps(Structs.comparing(Player::team), Structs.comparingBool(p -> !p.admin)));
         if(search.getText().length() > 0){
-            players.retainAll(p -> Strings.stripColors(p.name().toLowerCase()).contains(search.getText().toLowerCase()));
+            players.retainAll(p -> p.name().toLowerCase().contains(search.getText().toLowerCase()) || Strings.stripColors(p.name().toLowerCase()).contains(search.getText().toLowerCase()));
         }
 
         for(var user : players){
@@ -120,28 +122,25 @@ public class PlayerListFragment{
                 iconTable.addListener(listener);
                 iconTable.addListener(new HandCursorListener());
             }
-            iconTable.margin(8);
+            iconTable.margin(4);
             iconTable.add(new Image(user.icon()).setScaling(Scaling.bounded)).grow();
             iconTable.name = user.name();
             iconTable.touchable = Touchable.enabled;
 
             iconTable.tapped(() -> {
                 if(!user.dead() && clickable){
-                    Core.camera.position.set(user.unit());
                     ui.showInfoFade(Core.bundle.format("viewplayer", user.name), 1f);
-                    if(control.input instanceof DesktopInput input){
-                        input.panning = true;
-                    }
+                    control.input.panCamera(Tmp.v1.set(user.unit()));
                 }
             });
 
             button.add(iconTable).size(h);
-            button.labelWrap("[#" + user.color().toString().toUpperCase() + "]" + user.name()).style(Styles.outlineLabel).width(170f).pad(10);
-            button.add().grow();
+            button.image(Icon.admin).visible(() -> user.admin && !(!user.isLocal() && net.server())).pad(4).get().updateVisibility();
+            button.labelWrap("[#" + user.color().toString().toUpperCase() + "]" + user.name()).style(Styles.outlineLabel).growX();
 
-            button.background(Tex.underline);
+            button.background(Tex.underlineWhite);
+            button.setColor(state.rules.pvp || Core.settings.getBool("arcAlwaysTeamColor") ? user.team().color : Pal.gray);
 
-            button.image(Icon.admin).visible(() -> user.admin && !(!user.isLocal() && net.server())).padRight(5).get().updateVisibility();
 
             var ustyle = new ImageButtonStyle(){{
                 down = Styles.none;
@@ -151,11 +150,37 @@ public class PlayerListFragment{
                 imageOverColor = Color.lightGray;
             }};
 
+            button.button(Icon.copySmall, ustyle, () -> {
+                Core.app.setClipboardText(user.name);
+                UIExt.announce("已复制昵称：" + user.name);
+            }).size(iconMed);
+            button.button(Icon.linkSmall, ustyle, () -> ArcMessageDialog.share("AT", "戳了" + user.name + "[white]一下，并提醒你留意对话框")).size(iconMed);
+            button.button(Icon.lockSmall, ustyle, () -> {
+                if(InputHandler.follow != user){
+                    InputHandler.follow = user;
+                    if(control.input instanceof DesktopInput d){
+                        d.panning = true;
+                    }
+                }else{
+                    InputHandler.follow = null;
+                }
+                UIExt.announce("追踪玩家：" + user.name);
+            }).checked(b -> {
+                boolean checked = InputHandler.follow == user;
+                b.getImage().setDrawable(checked ? Icon.lockSmall : Icon.lockOpenSmall);
+                return checked;
+            }).size(iconMed);
+
+            button.button(Icon.planeOutlineSmall, ustyle, () ->
+            ui.showTextInput("@votekick.reason", Core.bundle.format("votekick.reason.message", user.name()), "", reason ->
+            Call.sendChatMessage("/votekick #" + user.id + " " + reason))
+            ).size(iconMed);
+
             if(net.server() || (player.admin && (!user.admin || user == player))){
                 button.add().growY();
 
                 if(allowTeamSwitch || user != player){
-                    button.button(Icon.menu, ustyle, () -> {
+                    button.button(Icon.wrenchSmall, ustyle, () -> {
                         var dialog = new BaseDialog(user.coloredName());
 
                         dialog.title.setColor(Color.white);
@@ -242,20 +267,11 @@ public class PlayerListFragment{
                         dialog.cont.button("@back", Icon.left, dialog::hide).padTop(-1f).size(220f, 55f);
 
                         dialog.show();
-
-
-                    }).size(h);
+                    }).size(iconMed);
                 }
-            }else if(!user.isLocal() && !user.admin && net.client() && Groups.player.size() >= 3 && player.team() == user.team()){ //votekick
-                button.add().growY();
-
-                button.button(Icon.hammer, ustyle,
-                    () -> ui.showTextInput("@votekick.reason", Core.bundle.format("votekick.reason.message", user.name()), "",
-                    reason -> Call.sendChatMessage("/votekick #" + user.id + " " + reason)))
-                .size(h);
             }
 
-            content.add(button).width(350f).height(h + 14);
+            content.add(button).width(600f).height(h + 14);
             content.row();
         }
 

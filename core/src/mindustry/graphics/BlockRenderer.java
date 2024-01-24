@@ -444,13 +444,18 @@ public class BlockRenderer{
                         Draw.z(Layer.block);
                     }
 
-                    if(build.team != pteam){
-                        if(build.block.drawTeamOverlay){
-                            build.drawTeam();
-                            Draw.z(Layer.block);
+                    if(build.team != pteam && build.block.drawTeamOverlay){
+                        Draw.z(Layer.block + 0.01f);
+                        build.drawTeam();
+                    }
+                    if(build.team == player.team() || RenderExt.showOtherInfo){
+                        if(renderer.drawStatus && block.hasConsumers){
+                            build.drawStatus();
                         }
-                    }else if(renderer.drawStatus && block.hasConsumers){
-                        build.drawStatus();
+                        if(RenderExt.drawBlockDisabled && !build.enabled()){
+                            Draw.z(Layer.power + 1);
+                            build.drawDisabled();
+                        }
                     }
                 }
                 Draw.reset();

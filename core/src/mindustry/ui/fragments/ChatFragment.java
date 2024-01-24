@@ -163,7 +163,10 @@ public class ChatFragment extends Table{
         Draw.alpha(shadowColor.a * opacity);
 
         float theight = offsety + spacing + getMarginBottom() + scene.marginBottom;
-        for(int i = scrollPos; i < messages.size && i < messagesShown + scrollPos && (i < fadetime || shown); i++){
+        int messageCount = 0;
+        for(int i = scrollPos; i < messages.size && messageCount < messagesShown && (i < fadetime || shown); i++){
+            if(!chatValidType(messages.get(i))) continue;
+            messageCount += 1;
 
             layout.setText(font, messages.get(i), Color.white, textWidth, Align.bottomLeft, true);
             theight += layout.height + textspacing;
@@ -194,6 +197,17 @@ public class ChatFragment extends Table{
         }
     }
 
+    private boolean chatValidType(String msg){
+        int chatType = settings.getInt("chatValidType");
+        if(chatType == 0 && (msg.contains("[acid][公屏][white]") || msg.contains("[逻辑~"))) return false;
+        else if(chatType == 1 &&
+        (msg.contains("加入了服务器") || msg.contains("离开了服务器") || msg.contains("小贴士") || msg.contains("自动存档完成") ||
+        msg.contains("登录成功") || msg.contains("经验+") || msg.contains("[ARC")
+        || (msg.contains("[acid][公屏][white]")) || msg.contains("[逻辑~"))) return false;
+        else if(chatType == 2 && !(msg.contains("[acid][公屏][white]") || msg.contains("[逻辑~"))) return false;
+        return true;
+    }
+
     private void sendMessage(){
         String message = chatfield.getText().trim();
         clearChatInput();
@@ -216,6 +230,8 @@ public class ChatFragment extends Table{
             if(mobile){
                 TextInput input = new TextInput();
                 input.maxLength = maxTextLength;
+                //MDTX mobile chatField support (from ARC)
+                input.text = chatfield.getText() + " ";
                 input.accepted = text -> {
                     chatfield.setText(text);
                     sendMessage();
@@ -245,7 +261,12 @@ public class ChatFragment extends Table{
     }
 
     public void updateChat(){
-        chatfield.setText(mode.normalizedPrefix() + history.get(historyPos));
+        //MDTX: better prefix handle (from ARC)
+        if(history.get(historyPos).contains(mode.normalizedPrefix())){
+            chatfield.setText(history.get(historyPos));
+        }else{
+            chatfield.setText(mode.normalizedPrefix() + history.get(historyPos));
+        }
         updateCursor();
     }
 

@@ -24,6 +24,7 @@ import mindustry.graphics.*;
 import mindustry.world.meta.*;
 import mindustryX.features.*;
 
+import static arc.math.Mathf.doubleRadDeg;
 import static mindustry.Vars.*;
 
 public class Weapon implements Cloneable{
@@ -227,10 +228,11 @@ public class Weapon implements Cloneable{
         wy = unit.y + Angles.trnsy(rotation, x, y) + Angles.trnsy(weaponRotation, 0, -realRecoil);
 
         if(shadow > 0){
-            Drawf.shadow(wx, wy, shadow);
+            Drawf.shadow(wx, wy, shadow, UnitType.unitTrans);
         }
 
         if(top){
+            Draw.alpha(UnitType.unitTrans);
             drawOutline(unit, mount);
         }
 
@@ -256,13 +258,13 @@ public class Weapon implements Cloneable{
         if(region.found()) Draw.rect(region, wx, wy, weaponRotation);
 
         if(cellRegion.found()){
-            Draw.color(unit.type.cellColor(unit));
+            Draw.color(unit.type.cellColor(unit), UnitType.unitTrans);
             Draw.rect(cellRegion, wx, wy, weaponRotation);
             Draw.color();
         }
 
         if(heatRegion.found() && mount.heat > 0){
-            Draw.color(heatColor, mount.heat);
+            Draw.color(heatColor, mount.heat * UnitType.unitTrans);
             Draw.blend(Blending.additive);
             Draw.rect(heatRegion, wx, wy, weaponRotation);
             Draw.blend();
@@ -284,6 +286,23 @@ public class Weapon implements Cloneable{
         }
 
         Draw.xscl = 1f;
+
+        if (mount.shoot && ArcUnits.unitWeaponTargetLine){
+            if(mount.aimX !=0 && mount.aimY != 0  && Mathf.len(mount.aimX - wx, mount.aimY - wy) <= 1200f){
+                Draw.z(z + 1f);
+                Lines.stroke(1f);
+                if (unit.controller() == player) {
+                    Draw.color(RenderExt.playerEffectColor);
+                } else {
+                    Draw.color(unit.team.color);
+                }
+                Draw.alpha(0.8f);
+                Lines.line(wx, wy, mount.aimX, mount.aimY);
+                if(!(unit.controller() instanceof Player) || Core.settings.getInt("unitTargetType") == 0)
+                    Lines.spikes(mount.aimX, mount.aimY, 4f, 4f, 4, (float)(Math.atan((mount.aimX - wx) / (mount.aimY - wy) * doubleRadDeg)) + 45f);
+                Draw.reset();
+            }
+        }
 
         Draw.z(z);
     }

@@ -35,15 +35,13 @@ public class MapInfoTable extends AuxiliaryTools.Table{
         button(Items.copper.emoji(), RStyles.clearLineNonet, this::floorStatisticDialog).tooltip("矿物信息");
         button(Icon.chatSmall, RStyles.clearAccentNonei, () -> UIExt.arcMessageDialog.show()).tooltip("中央监控室");
         button(Icon.playersSmall, RStyles.clearAccentNonei, () -> {
-            if(ui.listfrag.players.size > 1){
-                if(control.input instanceof DesktopInput){
-                    ((DesktopInput)control.input).panning = true;
-                }
-                if(InputHandler.follow == null) InputHandler.follow = ui.listfrag.players.get(0);
-                InputHandler.followIndex = (InputHandler.followIndex + 1) >= ui.listfrag.players.size ? 0 : InputHandler.followIndex + 1;
-                InputHandler.follow = ui.listfrag.players.get(InputHandler.followIndex);
-                UIExt.announce("视角追踪：" + InputHandler.follow.name);
+            var players = Groups.player.copy();
+            if(players.isEmpty())return;
+            if(control.input instanceof DesktopInput){
+                ((DesktopInput)control.input).panning = true;
             }
+            InputHandler.follow = players.get((players.indexOf(InputHandler.follow, true) + 1) % players.size);
+            UIExt.announce("视角追踪：" + InputHandler.follow.name);
         }).tooltip("切换跟踪玩家");
         if(!mobile) button(Icon.editSmall, RStyles.clearAccentNonei, this::uiTable).tooltip("ui大全");
     }

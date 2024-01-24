@@ -3,14 +3,17 @@ package mindustry.world.blocks;
 import arc.*;
 import arc.Graphics.*;
 import arc.Graphics.Cursor.*;
+import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
+import arc.scene.ui.layout.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
 import mindustry.*;
 import mindustry.annotations.Annotations.*;
 import mindustry.content.*;
+import mindustry.core.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
 import mindustry.game.EventType.*;
@@ -23,6 +26,7 @@ import mindustry.world.*;
 import mindustry.world.blocks.environment.*;
 import mindustry.world.blocks.storage.CoreBlock.*;
 import mindustry.world.modules.*;
+import mindustryX.features.func.*;
 
 import java.util.*;
 
@@ -125,7 +129,7 @@ public class ConstructBlock extends Block{
     static float calcPitch(boolean up){
         if(Time.timeSinceMillis(lastTime) < 16 * 30){
             lastTime = Time.millis();
-            pitchSeq ++;
+            pitchSeq++;
             if(pitchSeq > 30){
                 pitchSeq = 0;
             }
@@ -167,6 +171,40 @@ public class ConstructBlock extends Block{
         private @Nullable float[] accumulator;
         private @Nullable float[] totalAccumulator;
         private @Nullable int[] itemsLeft;
+
+        @Override
+        public void drawSelect(){
+            if(team.core() == null){
+                return;
+            }
+
+            // BlockUnit之上
+            Draw.z(Layer.flyingUnit + 0.1f);
+
+            float scl = block.size / 4f;
+            float buildHitSize = hitSize();
+
+            // 显示建造进度
+            var pos = Tmp.v1.set(this).add(0, buildHitSize / 2f);//顶部
+            FuncX.drawText(pos, Strings.fixed(progress * 100, 2) + "%", scl, Pal.accent, Align.bottom);
+
+            // 显示物品需求
+            StringBuilder requirements = new StringBuilder();
+            for(int i = 0; i < current.requirements.length; i++){
+                ItemStack stack = current.requirements[i];
+                float consumeAmount = state.rules.buildCostMultiplier * stack.amount;
+                int coreAmount = team.core().items.get(stack.item);
+
+                int investItem = (int)(progress * consumeAmount);
+                int needItem = (int)(consumeAmount) - investItem;
+                boolean hasItem = coreAmount >= needItem;
+
+                if(i != 0) requirements.append('\n');
+                requirements.append(stack.item.emoji()).append(hasItem ? "[#ffd37f]" : "[#e55454]").append(investItem).append("/").append(needItem).append("/").append(UI.formatAmount(coreAmount)).append("[]");
+            }
+            pos.set(this).add(-buildHitSize / 2f, -buildHitSize / 2f);//左下角
+            FuncX.drawText(pos, requirements.toString(), scl, Color.white, Align.topLeft);
+        }
 
         @Override
         public String getDisplayName(){
@@ -246,7 +284,7 @@ public class ConstructBlock extends Block{
 
                     Draw.rect(region, x, y, current.rotate && (noOverrides || current.regionRotated2 == i || current.regionRotated1 == i) ? rotdeg() : 0);
                     Draw.flush();
-                    i ++;
+                    i++;
                 }
 
                 Draw.color();

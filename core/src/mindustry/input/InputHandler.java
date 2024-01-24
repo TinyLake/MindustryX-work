@@ -36,11 +36,13 @@ import mindustry.world.*;
 import mindustry.world.blocks.ConstructBlock.*;
 import mindustry.world.blocks.*;
 import mindustry.world.blocks.distribution.*;
+import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.payloads.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.storage.CoreBlock.*;
 import mindustry.world.meta.*;
 import mindustryX.features.*;
+import mindustryX.features.func.*;
 
 import java.util.*;
 
@@ -58,6 +60,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     final static int maxLength = 100;
     final static Rect r1 = new Rect(), r2 = new Rect();
     final static Seq<Unit> tmpUnits = new Seq<>(false);
+    public static Player follow;
     final static Binding[] controlGroupBindings = {
     Binding.block_select_01,
     Binding.block_select_02,
@@ -108,6 +111,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     /** Groups of units saved to different hotkeys */
     public IntSeq[] controlGroups = new IntSeq[controlGroupBindings.length];
 
+    public Rect lastSelection = new Rect();
     private Seq<BuildPlan> plansOut = new Seq<>(BuildPlan.class);
     private QuadTree<BuildPlan> playerPlanTree = new QuadTree<>(new Rect());
 
@@ -629,7 +633,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
                 player.con.send(packet, true);
             }
 
-            throw new ValidateException(player, "Player cannot configure a tile.");
+            if(headless) throw new ValidateException(player, "Player cannot configure a tile.");
         }
         build.configured(player == null || player.dead() ? null : player.unit(), value);
         Events.fire(new ConfigEvent(build, player, value));
@@ -653,9 +657,8 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
             throw new ValidateException(player, "Player cannot control a building.");
         }
 
-        if(player.team() == build.team && build.canControlSelect(player.unit())){
+        if((player.team() == build.team || (build instanceof CoreBuild && state.rules.editor)) && build.canControlSelect(player.unit())){
             var before = player.unit();
-
             build.onControlSelect(player.unit());
 
             if(!before.dead && before.spawnedByCore && !before.isPlayer()){
@@ -854,6 +857,10 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
                 }
             }
         }
+
+        if(follow != null && !follow.dead()){
+            Core.camera.position.lerpDelta(follow, 0.08f);
+        }
     }
 
     public void checkUnit(){
@@ -1006,6 +1013,8 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
                 if(attack == null || attack.team() == player.team()){
                     attack = selectedEnemyUnit(target.x, target.y);
                 }
+
+                if(input.keyDown(KeyCode.altLeft)) attack = null;
 
                 int[] ids = new int[selectedUnits.size];
                 for(int i = 0; i < ids.length; i++){
@@ -1202,6 +1211,11 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         });
     }
 
+    protected void showSchematicPreview(){
+        if(lastSchematic == null) return;
+        ui.schematics.showInfo(lastSchematic);
+    }
+
     public void rotatePlans(Seq<BuildPlan> plans, int direction){
         int ox = schemOriginX(), oy = schemOriginY();
 
@@ -1235,6 +1249,19 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
             plan.x = World.toTile(wx - plan.block.offset) + ox;
             plan.y = World.toTile(wy - plan.block.offset) + oy;
             plan.rotation = plan.block.planRotation(Mathf.mod(plan.rotation + direction, 4));
+
+            if(Core.settings.getBool("rotateCanvas") && plan.block instanceof CanvasBlock cb){
+                CanvasBlock.CanvasBuild temp = cb.new CanvasBuild();
+                Pixmap pix = cb.makePixmap((byte[])plan.config), pix2 = new Pixmap(cb.canvasSize, cb.canvasSize);
+                pix.each((px, py) -> pix2.setRaw(
+                direction >= 0 ? py : cb.canvasSize - py - 1,
+                direction >= 0 ? cb.canvasSize - px - 1 : px,
+                pix.getRaw(px, py)));
+                plan.config = temp.packPixmap(pix2);
+                temp.remove();
+                pix.dispose();
+                pix2.dispose();
+            }
         });
     }
 
@@ -1266,6 +1293,14 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
 
             //flip rotation
             plan.block.flipRotation(plan, x);
+
+            if(Core.settings.getBool("rotateCanvas") && plan.block instanceof CanvasBlock cb){
+                CanvasBlock.CanvasBuild temp = cb.new CanvasBuild();
+                Pixmap pix = cb.makePixmap((byte[])plan.config);
+                plan.config = temp.packPixmap(x ? pix.flipX() : pix.flipY());
+                temp.remove();
+                pix.dispose();
+            }
         });
     }
 
@@ -1390,12 +1425,17 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     protected void drawSelection(int x1, int y1, int x2, int y2, int maxLength, Color col1, Color col2){
         NormalizeDrawResult result = Placement.normalizeDrawArea(Blocks.air, x1, y1, x2, y2, false, maxLength, 1f);
 
+        String arcSelectionSize = Math.abs(x2 - x1) + 1 + "×" + (Math.abs(y1 - y2) + 1);
+        FuncX.drawText(Tmp.v1.set((x1 + x2) / 2f, Math.max(y1, y2) + 1).scl(tilesize), arcSelectionSize, 2f, Pal.accent, Align.bottom);
         Lines.stroke(2f);
 
         Draw.color(col1);
         Lines.rect(result.x, result.y - 1, result.x2 - result.x, result.y2 - result.y);
         Draw.color(col2);
         Lines.rect(result.x, result.y, result.x2 - result.x, result.y2 - result.y);
+
+        lastSelection.set(x1, y1, x2 - x1, y2 - y1);
+        lastSelection.normalize();
     }
 
     protected void flushSelectPlans(Seq<BuildPlan> plans){
@@ -1581,7 +1621,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         if(build.block.commandable && commandMode){
             //TODO handled in tap.
             consumed = true;
-        }else if(build.block.configurable && build.interactable(player.team())){ //check if tapped block is configurable
+        }else if(build.block.configurable && (build.interactable(player.team()) || RenderExt.showOtherInfo)){ //check if tapped block is configurable
             consumed = true;
             if((!config.isShown() && build.shouldShowConfigure(player)) //if the config fragment is hidden, show
             //alternatively, the current selected block can 'agree' to switch config tiles
@@ -1610,7 +1650,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         //consume tap event if necessary
         if(build.interactable(player.team()) && build.block.consumesTap){
             consumed = true;
-        }else if(build.interactable(player.team()) && build.block.synthetic() && (!consumed || build.block.allowConfigInventory)){
+        }else if(build.interactable(player.team()) && build.block.synthetic() && (!consumed || build.block.allowConfigInventory || settings.getBool("forceConfigInventory"))){
             if(build.block.hasItems && build.items.total() > 0){
                 inv.showFor(build);
                 consumed = true;
@@ -1755,7 +1795,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
 
     public @Nullable Building selectedControlBuild(){
         Building build = world.buildWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
-        if(build != null && !player.dead() && build.canControlSelect(player.unit()) && build.team == player.team()){
+        if(build != null && !player.dead() && build.canControlSelect(player.unit()) && (build.team == player.team() || (build instanceof CoreBuild && state.rules.editor))){
             return build;
         }
         return null;
@@ -1841,6 +1881,9 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     }
 
     public boolean canShoot(){
+        if(Core.settings.getBool("playerNeedShooting")){
+            return block == null && !onConfigurable() && !isDroppingItem() && !commandMode;
+        }
         return block == null && !onConfigurable() && !isDroppingItem() && !player.unit().activelyBuilding() &&
             !(player.unit() instanceof Mechc && player.unit().isFlying()) && !player.unit().mining() && !commandMode;
     }

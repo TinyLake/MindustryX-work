@@ -30,7 +30,7 @@ public class Fonts{
     private static final ObjectSet<String> unscaled = ObjectSet.with("iconLarge");
     private static ObjectIntMap<String> unicodeIcons = new ObjectIntMap<>();
     private static IntMap<String> unicodeToName = new IntMap<>();
-    private static ObjectMap<String, String> stringIcons = new ObjectMap<>();
+    public static ObjectMap<String, String> stringIcons = new ObjectMap<>();
     private static ObjectMap<String, TextureRegion> largeIcons = new ObjectMap<>();
 
     public static Font def, outline, icon, iconLarge, tech, logic;
