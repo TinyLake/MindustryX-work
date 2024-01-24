@@ -13,6 +13,7 @@ import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.type.*;
 import mindustry.ui.*;
+import mindustryX.features.ui.*;
 
 public class ShieldArcAbility extends Ability{
     private static Unit paramUnit;
@@ -60,7 +61,7 @@ public class ShieldArcAbility extends Ability{
     public boolean drawArc = true;
     /** If not null, will be drawn on top. */
     public @Nullable String region;
-    /** Color override of the shield. Uses unit shield colour by default. */ 
+    /** Color override of the shield. Uses unit shield colour by default. */
     public @Nullable Color color;
     /** If true, sprite position will be influenced by x/y. */
     public boolean offsetRegion = false;
@@ -80,7 +81,7 @@ public class ShieldArcAbility extends Ability{
 
     @Override
     public void update(Unit unit){
-        
+
         if(data < max){
             data += Time.delta * regen;
         }
@@ -135,6 +136,6 @@ public class ShieldArcAbility extends Ability{
 
     @Override
     public void displayBars(Unit unit, Table bars){
-        bars.add(new Bar("stat.shieldhealth", Pal.accent, () -> data / max)).row();
+        bars.add(new Bar(() -> (data < 0 ? "[red]" : "") + "\uE84D " + FormatDefault.percent(data, max), () -> Pal.accent, () -> data / max)).row();
     }
 }

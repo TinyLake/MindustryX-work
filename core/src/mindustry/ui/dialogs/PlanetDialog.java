@@ -36,6 +36,8 @@ import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.storage.CoreBlock.*;
+import mindustryX.features.*;
+import mindustryX.features.func.*;
 
 import static arc.Core.*;
 import static mindustry.Vars.*;
@@ -68,9 +70,13 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
 
     private Texture[] planetTextures;
 
+    private boolean alwaysShowName = false;
+
+    private int viewInt = 60;
+
     public PlanetDialog(){
         super("", Styles.fullDialog);
-        
+
         state.renderer = this;
         state.drawUi = true;
 
@@ -284,6 +290,13 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
             buttons.add().growX();
             buttons.add(sectorTop).minWidth(230f);
             buttons.add().growX();
+            buttons.button("显示周期", Icon.settings, () -> {
+                if(viewInt == 1) viewInt = 60;
+                else if(viewInt == 60) viewInt = 120;
+                else viewInt = 1;
+                UIExt.announce("调整资源输入|输出显示周期为 [orange]" + viewInterval(viewInt));
+            }).size(100f, 54f).pad(2).bottom();
+            buttons.button("区块名称", Icon.bookOpen, () -> alwaysShowName = !alwaysShowName).size(100f, 54f).pad(2).bottom();
             addTech();
         }
     }
@@ -520,6 +533,11 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
                         Draw.rect(icon, 0, 0, iw, iw * icon.height / icon.width);
                     });
                 }
+                planets.drawPlane(sec, () -> {
+                    if((canSelect(sec) || sec.hasBase()) && alwaysShowName){
+                        FuncX.drawText(Vec2.ZERO, (sec.preset != null ? "" : "[gray]") + sec.name(), Scl.scl(2));
+                    }
+                });
             }
         }
 
@@ -661,7 +679,7 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
 
             //sector notifications & search
             c.top().right();
-            c.defaults().width(290f);
+            c.defaults().width(350f);
 
             c.button(bundle.get("sectorlist") +
             (attacked == 0 ? "" : "\n[red]⚠[lightgray] " + bundle.format("sectorlist.attacked", "[red]" + attacked + "[]")),
@@ -705,7 +723,7 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
 
             readd[0] = () -> {
                 con.clearChildren();
-                for(Sector sec : all){
+                for(Sector sec : all.copy().sort(sector -> sector.info.production.size)){
                     if(sec.hasBase() && (searchText.isEmpty() || sec.name().toLowerCase().contains(searchText.toLowerCase()))){
                         con.button(t -> {
                             t.marginRight(10f);
@@ -724,6 +742,19 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
                                 String ic = sec.iconChar() == null ? "" : sec.iconChar() + " ";
 
                                 head.add(ic + sec.name()).growX().wrap();
+
+                                if(!mobile && !sec.info.export.isEmpty() && sec.info.destination != null && sec.info.destination.hasBase()){
+                                    String des = sec.info.destination.iconChar();
+                                    String text = Iconc.rightOpen + " " + (des == null || des.isEmpty() ? "" : des + " ") + sec.info.destination.name();
+                                    head.button(text, Styles.cleart, () -> {
+                                        ui.planet.showSelect(sec, other -> {
+                                            if(other.planet == sec.planet){
+                                                sec.info.destination = other;
+                                            }
+                                        });
+                                    }).minWidth(150f).right().padRight(10f);
+                                }
+
                             }).growX().row();
 
                             if(sec.isAttacked()){
@@ -762,7 +793,7 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
             buffer.end();
 
             Draw.color(color);
-            Draw.rect(Draw.wrap(buffer.getTexture()), width/2f, height/2f, width, -height);
+            Draw.rect(Draw.wrap(buffer.getTexture()), width / 2f, height / 2f, width, -height);
             Draw.color();
         }
     }
@@ -866,14 +897,15 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
         Table t = new Table().left();
 
         int i = 0;
+        int rowSet = settings.getInt("itemSelectionWidth");
         for(var item : content.items()){
             var stat = stats.get(item);
             if(stat == null) continue;
-            int total = (int)(stat.mean * 60 * scl);
-            if(total > 1){
+            int total = (int)(stat.mean * viewInt * scl);
+            if(total != 0){
                 t.image(item.uiIcon).padRight(3);
-                t.add(UI.formatAmount(total) + " " + Core.bundle.get("unit.perminute")).color(Color.lightGray).padRight(3);
-                if(++i % 3 == 0){
+                t.add(UI.formatAmount(total)).color(Color.lightGray).padRight(3);
+                if(++i % rowSet == 0){
                     t.row();
                 }
             }
@@ -881,7 +913,11 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
 
         if(t.getChildren().any()){
             c.defaults().left();
-            c.add(name).row();
+            c.table(label -> {
+                label.add(name).color(Pal.accent);
+                label.add("(" + viewInterval(viewInt) + ")").color(Pal.accent);
+            }).center().row();
+            c.image().color(Pal.accent).fillX().row();
             builder.get(c);
             c.add(t).padLeft(10f).row();
         }
@@ -908,7 +944,8 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
             }
 
             if(sector.save != null && sector.info.resources.any()){
-                c.add("@sectors.resources").left().row();
+                c.add("@sectors.resources").color(Pal.accent).center().row();
+                c.image().color(Pal.accent).fillX().row();
                 c.table(t -> {
                     for(UnlockableContent uc : sector.info.resources){
                         if(uc == null) continue;
@@ -943,7 +980,8 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
             //stored resources
             if(sector.hasBase() && items.total > 0){
 
-                c.add("@sectors.stored").left().row();
+                c.add("@sectors.stored").color(Pal.accent).center().row();
+                c.image().color(Pal.accent).fillX().row();
                 c.table(t -> {
                     t.left();
 
@@ -953,7 +991,7 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
                         for(ItemStack stack : items){
                             res.image(stack.item.uiIcon).padRight(3);
                             res.add(UI.formatAmount(Math.max(stack.amount, 0))).color(Color.lightGray);
-                            if(++i % 4 == 0){
+                            if(++i % settings.getInt("itemSelectionWidth") == 0){
                                 res.row();
                             }
                         }
@@ -1205,6 +1243,7 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
 
                     return;
                 }
+                if(attacked != sector && settings.getBool("forceIgnoreAttack")) ui.showInfo("[red]警告：你的一个区块正在遭受攻击。[white]\n但你使用了学术端的作弊功能来强行切换区块，这可能导致未知问题！");
             }
         }
 
@@ -1285,6 +1324,13 @@ public class PlanetDialog extends BaseDialog implements PlanetInterfaceRenderer{
         }
 
         if(shouldHide) hide();
+    }
+
+    private String viewInterval(int viewInt){
+        if(viewInt == 60) return "每分";
+        else if(viewInt == 120) return "每周期";
+        else if(viewInt == 1) return "每秒";
+        else return "每" + viewInt + "秒";
     }
 
     public enum Mode{

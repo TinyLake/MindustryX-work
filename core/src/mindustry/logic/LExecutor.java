@@ -9,6 +9,7 @@ import arc.util.*;
 import mindustry.*;
 import mindustry.ai.types.*;
 import mindustry.annotations.Annotations.*;
+import mindustryX.features.ui.ArcMessageDialog;
 import mindustry.content.*;
 import mindustry.core.*;
 import mindustry.ctype.*;
@@ -30,6 +31,7 @@ import mindustry.world.blocks.logic.MemoryBlock.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
 import mindustry.world.blocks.payloads.*;
 import mindustry.world.meta.*;
+import mindustryX.features.ui.ArcMessageDialog.*;
 
 import static mindustry.Vars.*;
 
@@ -45,9 +47,9 @@ public class LExecutor{
     public LInstruction[] instructions = {};
     /** Non-constant variables used for network sync */
     public LVar[] vars = {};
-    
+
     public LVar counter, unit, thisv, ipt;
-    
+
     public int[] binds;
     public boolean yield;
 
@@ -501,6 +503,7 @@ public class LExecutor{
         public void run(LExecutor exec){
             Object obj = target.obj();
             if(obj instanceof Building b && (exec.privileged || (b.team == exec.team && exec.linkIds.contains(b.id)))){
+                b.lastLogicController = exec.build;
 
                 if(type == LAccess.enabled && !p1.bool()){
                     b.lastDisabler = exec.build;
@@ -1192,7 +1195,7 @@ public class LExecutor{
         @Override
         public void run(LExecutor exec){
             if(headless) return;
-
+            if(Core.settings.getBool("removeLogicLock"))return;
             switch(action){
                 case pan -> {
                     control.input.logicCutscene = true;
@@ -1623,8 +1626,14 @@ public class LExecutor{
             }
 
             switch(type){
-                case notify -> ui.hudfrag.showToast(Icon.info, text);
-                case announce -> ui.announce(text, duration.numf());
+                case notify -> {
+                    ui.hudfrag.showToast(Icon.info, text);
+                    ArcMessageDialog.addMsg(new Msg(Type.logicNotify,text).sendMessage());
+                }
+                case announce -> {
+                    ui.announce(text, duration.numf());
+                    ArcMessageDialog.addMsg(new Msg(Type.logicAnnounce,text).sendMessage());
+                }
                 case toast -> ui.showInfoToast(text, duration.numf());
                 //TODO desync?
                 case mission -> state.rules.mission = text;

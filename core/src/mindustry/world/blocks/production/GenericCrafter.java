@@ -1,5 +1,8 @@
 package mindustry.world.blocks.production;
 
+
+import arc.*;
+import arc.scene.ui.layout.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
@@ -12,6 +15,8 @@ import mindustry.entities.units.*;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.*;
+import mindustry.graphics.*;
+import mindustry.ui.*;
 import mindustry.world.*;
 import mindustry.world.blocks.liquid.Conduit.*;
 import mindustry.world.draw.*;
@@ -358,5 +363,29 @@ public class GenericCrafter extends Block{
             warmup = read.f();
             if(legacyReadWarmup) read.f();
         }
+
+        @Override
+        public void displayBars(Table bars){
+            super.displayBars(bars);
+            //bar for shoot cd
+            bars.add(new Bar(() -> Iconc.crafting + " " + Strings.fixed(progress * 100f, 0)  + " %" + Calwavetimeremain(progress,getProgressIncrease(craftTime)*timeScale*60 / Time.delta),
+                    () -> Pal.ammo, () -> progress));
+            bars.row();
+        }
+    }
+    private String Calwavetimeremain(float progress,float ProgressIncrease){
+        if(ProgressIncrease == 0f || 1 / ProgressIncrease < 240f){
+            return "";
+        }
+        float time = (1-progress)/ProgressIncrease;
+
+        String wavetimeremain = " [orange]~";
+        int m = ((int)time) / 60;
+        if (m==0){
+            return "";
+        }
+        wavetimeremain += String.valueOf(m) ;
+        wavetimeremain += "min";
+        return wavetimeremain;
     }
 }

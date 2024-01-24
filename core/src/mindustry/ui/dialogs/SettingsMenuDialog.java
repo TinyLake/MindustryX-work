@@ -299,7 +299,6 @@ public class SettingsMenuDialog extends BaseDialog{
         sound.sliderPref("musicvol", 100, 0, 100, 1, i -> i + "%");
         sound.sliderPref("sfxvol", 100, 0, 100, 1, i -> i + "%");
         sound.sliderPref("ambientvol", 100, 0, 100, 1, i -> i + "%");
-        sound.sliderPref("arcvol", settings.getInt("musicvol"), 0, 100, 1, i -> i + "%");
 
         game.sliderPref("saveinterval", 60, 10, 5 * 120, 10, i -> Core.bundle.format("setting.seconds", i));
 

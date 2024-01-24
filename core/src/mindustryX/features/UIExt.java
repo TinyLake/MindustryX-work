@@ -20,6 +20,7 @@ public class UIExt{
     public static TeamSelectDialog teamSelect;
     public static ModsRecommendDialog modsRecommend = new ModsRecommendDialog();
     public static TeamsStatDisplay teamsStatDisplay;
+    public static ArcMessageDialog arcMessageDialog = new ArcMessageDialog();
     public static HudSettingsTable hudSettingsTable = new HudSettingsTable();
     public static AdvanceToolTable advanceToolTable = new AdvanceToolTable();
     public static AdvanceBuildTool advanceBuildTool = new AdvanceBuildTool();

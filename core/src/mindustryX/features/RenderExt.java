@@ -7,8 +7,8 @@ import arc.math.*;
 import arc.math.geom.*;
 import arc.util.*;
 import mindustry.*;
-import mindustry.arcModule.draw.*;
 import mindustry.entities.*;
+import mindustry.game.*;
 import mindustry.game.EventType.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
@@ -16,12 +16,14 @@ import mindustry.type.*;
 import mindustry.world.*;
 import mindustry.world.blocks.defense.*;
 import mindustry.world.blocks.defense.turrets.*;
+import mindustry.world.blocks.defense.turrets.BaseTurret.*;
 import mindustry.world.blocks.distribution.MassDriver.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
 import mindustry.world.blocks.production.Drill.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.units.*;
+import mindustryX.features.func.*;
 
 import static mindustry.Vars.tilesize;
 
@@ -40,6 +42,8 @@ public class RenderExt{
     public static int massDriverLineInterval;
     public static boolean drawBars, drawBarsMend;
     public static float healthBarMinHealth;
+    public static boolean drawBlockDisabled;
+    public static boolean showOtherInfo;
 
     public static boolean unitHide = false;
     public static Color massDriverLineColor = Color.clear;
@@ -78,6 +82,9 @@ public class RenderExt{
             drawBars = Core.settings.getBool("blockBars");
             drawBarsMend = Core.settings.getBool("blockBars_mend");
             healthBarMinHealth = Core.settings.getInt("blockbarminhealth");
+            drawBlockDisabled = Core.settings.getBool("blockdisabled");
+            showOtherInfo = Core.settings.getBool("showOtherTeamState");
+            showOtherInfo |= Vars.player.team().id == 255 || Vars.state.rules.mode() != Gamemode.pvp;
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);
@@ -103,6 +110,8 @@ public class RenderExt{
             drawMassDriverLine(b);
         if(build != null && drawBars)
             drawBars(build);
+        if(build instanceof BaseTurretBuild turretBuild)
+            ArcBuilds.arcTurret(turretBuild);
     }
 
     private static void placementEffect(float x, float y, float lifetime, float range, Color color){
@@ -191,7 +200,7 @@ public class RenderExt{
         if(buildRatio >= 0){
             drawBar(build, Color.black, Pal.accent, buildRatio);
             String progressT = Strings.format("[stat]@% | @s", (int)(Mathf.clamp(buildRatio, 0f, 1f) * 100), leftTime < 0 ? Iconc.cancel : Strings.fixed(leftTime / (60f * Vars.state.rules.unitBuildSpeed(build.team) * build.timeScale()), 0));
-            WorldLabel.drawAt(progressT, build.x, build.y + build.block.offset * 0.8f - 5f, Draw.z(), WorldLabel.flagOutline, 0.9f);
+            FuncX.drawText(Tmp.v1.set(build).add(0, build.block.offset * 0.8f - 5f), progressT, 0.9f);
         }
     }
 

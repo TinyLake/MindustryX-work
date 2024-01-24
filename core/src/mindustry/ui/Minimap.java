@@ -22,8 +22,6 @@ public class Minimap extends Table{
 
         mapCell = add(new Element(){
             {
-                setSize(Scl.scl(140f));
-
                 addListener(new ClickListener(KeyCode.mouseRight){
                     @Override
                     public void clicked(InputEvent event, float cx, float cy){

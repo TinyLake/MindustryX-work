@@ -99,11 +99,17 @@ public enum Binding implements KeyBind{
     chat_mode(KeyCode.tab),
     console(KeyCode.f8),
 
+    superUnitEffect(KeyCode.o,"ARC"),
+    showRTSAi(KeyCode.l),
+    arcDetail(KeyCode.unset),
+    arcScanMode(KeyCode.unset),
+    oreAdsorption(KeyCode.unset),
+
     //MDTX
-    toggle_unit(KeyCode.unknown, "mindustryX"),
+    toggle_unit(KeyCode.unset, "mindustryX"),
     point(KeyCode.j),
-    lockonLastMark(KeyCode.unknown),
-    toggle_block_render(KeyCode.unknown),
+    lockonLastMark(KeyCode.unset),
+    toggle_block_render(KeyCode.unset),
     ;
 
     private final KeybindValue defaultValue;

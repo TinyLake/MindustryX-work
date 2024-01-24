@@ -8,6 +8,7 @@ import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
+import arc.scene.ui.Label;
 import arc.scene.ui.layout.*;
 import arc.struct.Bits;
 import arc.struct.*;
@@ -27,11 +28,13 @@ import mindustry.world.blocks.ConstructBlock.*;
 import mindustry.world.meta.*;
 import mindustryX.*;
 import mindustryX.events.*;
+import mindustryX.features.*;
 
 import java.io.*;
 import java.util.zip.*;
 
 import static mindustry.Vars.*;
+import static mindustry.logic.LogicDialog.*;
 
 public class LogicBlock extends Block{
     @MindustryXApi
@@ -114,7 +117,7 @@ public class LogicBlock extends Block{
     }
 
     public boolean accessible(){
-        return !privileged || state.rules.editor || state.playtestingMap != null;
+        return !privileged || state.rules.editor || state.playtestingMap != null || RenderExt.showOtherInfo;
     }
 
     @Override
@@ -259,6 +262,14 @@ public class LogicBlock extends Block{
         /** Display name, for convenience. This is currently only available for world processors. */
         public @Nullable String tag;
         public char iconTag;
+
+        Table settingTable = new Table();
+        boolean showSettingTable = false;
+        boolean showContent = false;
+
+        float counter = 0f;
+
+        boolean linkSimplify = false;
 
         /** Block of code to run after load. */
         public @Nullable Runnable loadBlock;
@@ -583,10 +594,12 @@ public class LogicBlock extends Block{
             }
 
             //draw top text on separate layer
+            //draw link order
+            int i = 0;
             for(LogicLink l : links){
                 Building build = world.build(l.x, l.y);
                 if(l.active && validLink(build)){
-                    build.block.drawPlaceText(l.name, build.tileX(), build.tileY(), true);
+                    build.block.drawPlaceText(linkSimplify ? i++ + "" : l.name + "[" + i++ + "]", build.tileX(), build.tileY(), true);
                 }
             }
         }
@@ -638,6 +651,61 @@ public class LogicBlock extends Block{
             return other != null && other.isValid() && (privileged || (!other.block.privileged && other.team == team && other.within(this, range + other.block.size*tilesize/2f))) && !(other instanceof ConstructBuild);
         }
 
+        private void rebuildSettingTable() {
+            settingTable.clear();
+            if (!showSettingTable) return;
+            settingTable.setColor(Color.lightGray);
+            settingTable.update(() -> {
+                counter += Time.delta;
+                if (counter > period && refreshing) {
+                    counter = 0;
+                }
+            });
+            settingTable.table(t -> {
+                t.button(Icon.copy, Styles.cleari, () -> {
+                    Core.app.setClipboardText(code);
+                    UIExt.announce("已复制逻辑");
+                }).size(40);
+                t.button(Icon.download, Styles.cleari, () -> {
+                    updateCode(Core.app.getClipboardText().replace("\r\n", "\n"));
+                    UIExt.announce("已导入逻辑(仅单机生效)");
+                }).size(40);
+                t.button(Icon.trash, Styles.cleari, () -> {
+                    code = "";
+                    updateCode(code);
+                    UIExt.announce("已清除逻辑(仅单机生效)");
+                }).size(40);
+                t.button(Icon.chatSmall, Styles.cleari, () -> {
+                    linkSimplify = !linkSimplify;
+                    UIExt.announce(linkSimplify ? "仅显示linkindex" : "显示方块名和linkindex");
+                }).size(40);
+                t.button(Icon.info, Styles.cleari, () -> {
+                    showContent = !showContent;
+                    rebuildSettingTable();
+                }).size(40);
+            });
+            if (showContent && !code.isEmpty()) {
+                settingTable.row();
+                settingTable.pane(t -> {
+                    for (var s : executor.vars) {
+                        if(s.name.startsWith("___")) continue;
+                        String text = arcVarsText(s);
+                        t.table(tt -> {
+                            tt.labelWrap(s.name + "").color(arcVarsColor(s)).width(100f);
+                            Label label = tt.labelWrap(" : " + text).width(200f).get();
+                            tt.update(() -> {
+                                if (counter + Time.delta > period && refreshing) {
+                                    label.setText(arcVarsText(s));
+                                }
+                            });
+                        });
+                        t.row();
+                    }
+                }).maxHeight(400f);
+
+            }
+        }
+
         @Override
         public boolean shouldShowConfigure(Player player){
             return accessible();
@@ -645,7 +713,21 @@ public class LogicBlock extends Block{
 
         @Override
         public void buildConfiguration(Table table){
-            table.button(Icon.pencil, Styles.cleari, this::showEditDialog).size(40);
+            if (Core.settings.getBool("logicSupport")){
+                table.table(t -> {
+                    t.button(Icon.pencil, Styles.cleari, () -> {
+                        ui.logic.show(code, executor, privileged, code -> configure(compress(code, relativeConnections())));
+                    }).size(40);
+                    t.button(Icon.settings, Styles.cleari, () -> {
+                        showSettingTable = !showSettingTable;
+                        rebuildSettingTable();
+                    }).size(40);
+                });
+                table.row();
+                table.add(settingTable);
+            }else{
+                table.button(Icon.pencil, Styles.cleari, this::showEditDialog).size(40);
+            }
         }
 
         public void showEditDialog(){

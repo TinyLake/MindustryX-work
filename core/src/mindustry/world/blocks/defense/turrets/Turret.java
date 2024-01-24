@@ -7,6 +7,7 @@ import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
+import arc.scene.ui.layout.Table;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
@@ -360,6 +361,18 @@ public class Turret extends ReloadTurret{
             drawer.draw(this);
         }
 
+        //show shoot target line
+        @Override
+        public void drawSelect(){
+            super.drawSelect();
+            if(!targetPos.isZero() && dst(targetPos) < range * 5){
+                Lines.stroke(1f);
+                Lines.dashLine(x, y, targetPos.x, targetPos.y, (int)(Mathf.len(targetPos.x - x, targetPos.y - y) / 8));
+                Lines.dashCircle(targetPos.x, targetPos.y, 8);
+                Draw.reset();
+            }
+        }
+
         @Override
         public void updateTile(){
             if(!validateTarget()) target = null;
@@ -665,6 +678,14 @@ public class Turret extends ReloadTurret{
         @Override
         public byte version(){
             return 1;
+        }
+
+        @Override
+        public void displayBars(Table bars) {
+            super.displayBars(bars);
+            if (minWarmup > 0f) {
+                bars.add(new Bar(() -> Core.bundle.format("bar.warmupDetail", (int)(shootWarmup * 100 / minWarmup)), () -> Pal.ammo, () -> shootWarmup / minWarmup)).row();
+            }
         }
     }
 

@@ -1,15 +1,20 @@
 package mindustryX.features;
 
+import arc.*;
 import arc.func.*;
 import arc.graphics.*;
+import arc.graphics.g2d.*;
 import arc.struct.*;
 import arc.util.*;
+import mindustry.ctype.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import mindustry.world.*;
 import mindustryX.features.Settings.*;
 import mindustryX.features.ui.*;
 
 import static arc.Core.settings;
+import static arc.graphics.Color.RGBtoHSV;
 import static mindustry.Vars.*;
 
 public class ArcOld{
@@ -232,5 +237,42 @@ public class ArcOld{
             c.sliderPref("limitdst", 10, 0, 100, 1, s -> s + "格");
             c.checkPref("developMode", false);
         }));
+    }
+
+    public static void colorizeContent(){
+        if(!settings.getBool("colorizedContent")) return;
+        content.items().each(c -> colorizeContent(c, c.color));
+        content.liquids().each(c -> colorizeContent(c, c.color));
+        content.statusEffects().each(c -> colorizeContent(c, c.color));
+        content.planets().each(c -> colorizeContent(c, c.atmosphereColor));
+        content.blocks().each(c -> {
+            if(c.hasColor) colorizeContent(c, blockColor(c));
+            else if(c.itemDrop != null) colorizeContent(c, c.itemDrop.color);
+        });
+    }
+
+    private static void colorizeContent(UnlockableContent c, Color color){
+        c.localizedName = "[#" + color + "]" + c.localizedName + "[]";
+    }
+
+    private static Color blockColor(Block block){
+        Color bc = new Color(0, 0, 0, 1);
+        Color bestColor = new Color(0, 0, 0, 1);
+        int highestS = 0;
+        if(!block.synthetic()){
+            PixmapRegion image = Core.atlas.getPixmap(block.fullIcon);
+            for(int x = 0; x < image.width; x++)
+                for(int y = 0; y < image.height; y++){
+                    bc.set(image.get(x, y));
+                    int s = RGBtoHSV(bc)[1] * RGBtoHSV(bc)[1] + RGBtoHSV(bc)[2] + RGBtoHSV(bc)[2];
+                    if(s > highestS){
+                        highestS = s;
+                        bestColor = bc;
+                    }
+                }
+        }else{
+            return block.mapColor.cpy().mul(1.2f);
+        }
+        return bestColor;
     }
 }

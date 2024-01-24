@@ -62,7 +62,7 @@ public class PausedDialog extends BaseDialog{
             cont.button("@back", Icon.left, this::hide).name("back");
             cont.button("@settings", Icon.settings, ui.settings::show).name("settings");
 
-            if(!state.isCampaign() && !state.isEditor()){
+            if(Core.settings.getBool("save_more_map") || (!state.isCampaign() && !state.isEditor())){
                 cont.row();
                 cont.button("@savegame", Icon.save, save::show);
                 cont.button("@loadgame", Icon.upload, load::show).disabled(b -> net.active());
@@ -89,6 +89,10 @@ public class PausedDialog extends BaseDialog{
 
             cont.row();
 
+            cont.button("@joingame", Icon.host, () -> {
+                this.hide();
+                ui.join.show();
+            });
             cont.button("@quit", Icon.exit, this::showQuitConfirm).colspan(2).width(dw + 10f).update(s -> s.setText(control.saves.getCurrent() != null && control.saves.getCurrent().isAutosave() ? "@save.quit" : "@quit"));
 
         }else{
@@ -121,6 +125,12 @@ public class PausedDialog extends BaseDialog{
                 s.setText(control.saves.getCurrent() != null && control.saves.getCurrent().isAutosave() ? "@save.quit" : "@quit");
                 s.getLabelCell().growX().wrap();
             });
+
+            if(mobile){
+                cont.row();
+                int columns = cont.getColumns();
+                cont.button("@database", Icon.book, ui.database::show).colspan(columns).size(Float.NEGATIVE_INFINITY, 60).fillX();
+            }
         }
     }
 

@@ -8,11 +8,10 @@ import mindustry.gen.*;
 import mindustry.input.*;
 import mindustryX.features.*;
 import mindustryX.features.Settings;
+import mindustryX.features.ui.*;
 
 import java.net.*;
 import java.util.*;
-
-import static arc.Core.*;
 
 public class Hooks implements ApplicationListener{
     /** invoke before `Vars.init`. Note that may be executed from `Vars.loadAsync` */
@@ -58,6 +57,14 @@ public class Hooks implements ApplicationListener{
         if(message == null) return null;
         if(Vars.ui != null){
             if(MarkerType.resolveMessage(message)) return message;
+            try{
+                ArcMessageDialog.resolveMsg(message, sender);
+                if(sender != null){
+                    message = (sender.unit().isNull() ? Iconc.alphaaaa : sender.unit().type.emoji()) + " " + message;
+                }
+            }catch(Exception e){
+                Log.err(e);
+            }
         }
         return message;
     }
@@ -78,8 +85,18 @@ public class Hooks implements ApplicationListener{
         if(Core.input.keyTap(Binding.point)){
             MarkerType.selected.markWithMessage(Core.input.mouseWorld());
         }
-        if(input.keyTap(Binding.toggle_block_render)){
-            settings.put("blockRenderLevel", (RenderExt.blockRenderLevel + 1) % 3);
+        if(Core.input.keyTap(Binding.toggle_block_render)){
+            Core.settings.put("blockRenderLevel", (RenderExt.blockRenderLevel + 1) % 3);
+        }
+        if(Core.input.keyTap(Binding.arcScanMode)){
+            ArcScanMode.enabled = !ArcScanMode.enabled;
+        }
+        if(Core.input.keyTap(Binding.showRTSAi)){
+            Core.settings.put("alwaysShowUnitRTSAi", !Core.settings.getBool("alwaysShowUnitRTSAi"));
+        }
+        if(Core.input.keyTap(Binding.superUnitEffect)){
+            int level = Core.settings.getInt("superUnitEffect");
+            Core.settings.put("superUnitEffect", (level + 1) % 3);
         }
     }
 
