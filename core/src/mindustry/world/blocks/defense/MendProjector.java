@@ -13,6 +13,7 @@ import mindustry.logic.*;
 import mindustry.world.*;
 import mindustry.world.consumers.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -126,6 +127,13 @@ public class MendProjector extends Block{
         public void draw(){
             super.draw();
 
+            float realRange = range + phaseHeat * phaseRangeBoost;
+            if(status() == BlockStatus.active && RenderExt.mendZoneTransparency > 0.02f){
+                var c = Tmp.c1.set(baseColor);
+                if(phaseHeat > 0) c.lerp(phaseColor, 0.5f);
+                Draw.color(c, RenderExt.mendZoneTransparency);
+                Lines.dashCircle(x, y, realRange);
+            }
             float f = 1f - (Time.time / 100f) % 1f;
 
             Draw.color(baseColor, phaseColor, phaseHeat);
