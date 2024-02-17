@@ -303,8 +303,8 @@ public class SettingsMenuDialog extends BaseDialog{
 
         game.sliderPref("saveinterval", 60, 10, 5 * 120, 10, i -> Core.bundle.format("setting.seconds", i));
 
+        game.checkPref("autotarget", true);
         if(mobile){
-            game.checkPref("autotarget", true);
             if(!ios){
                 game.checkPref("keyboard", false, val -> {
                     control.setInput(val ? new DesktopInput() : new MobileInput());
@@ -338,11 +338,9 @@ public class SettingsMenuDialog extends BaseDialog{
         game.checkPref("hints", true);
         game.checkPref("logichints", true);
 
-        if(!mobile){
-            game.checkPref("backgroundpause", true);
-            game.checkPref("buildautopause", false);
-            game.checkPref("distinctcontrolgroups", true);
-        }
+        game.checkPref("backgroundpause", true);
+        game.checkPref("buildautopause", false);
+        game.checkPref("distinctcontrolgroups", true);
 
         game.checkPref("doubletapmine", false);
         game.checkPref("commandmodehold", true);
@@ -364,9 +362,9 @@ public class SettingsMenuDialog extends BaseDialog{
             }
         }
 
-        if(!mobile){
-            game.checkPref("console", false);
-        }
+        game.checkPref("console", false);
+
+        graphics.addCategory("arcCOverview");
 
         int[] lastUiScale = {settings.getInt("uiscale", 100)};
 
@@ -445,18 +443,18 @@ public class SettingsMenuDialog extends BaseDialog{
         graphics.checkPref("destroyedblocks", true);
         graphics.checkPref("blockstatus", false);
         graphics.checkPref("playerchat", true);
-        if(!mobile){
-            graphics.checkPref("coreitems", true);
-        }
+
+        graphics.addCategory("arcCgamewindow");
+        graphics.checkPref("coreitems", true);
         graphics.checkPref("minimap", !mobile);
         graphics.checkPref("smoothcamera", true);
         graphics.checkPref("position", false);
-        if(!mobile){
-            graphics.checkPref("mouseposition", false);
-        }
+        graphics.checkPref("mouseposition", false);
         graphics.checkPref("fps", false);
         graphics.checkPref("playerindicators", true);
         graphics.checkPref("indicators", true);
+
+        graphics.addCategory("arcCGraphicsOther");
         graphics.checkPref("showweather", true);
         graphics.checkPref("animatedwater", true);
 

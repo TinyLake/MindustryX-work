@@ -74,6 +74,7 @@ public class Settings{
             c.checkPref("renderMerge", true);
             c.checkPref("renderSort", false);
         }));
+        ArcOld.init(categories);
         Events.on(ClientLoadEvent.class, e -> {
             categories.each(LazySettingsCategory::init);
             Vars.ui.settings.getCategories().addAll(categories);
