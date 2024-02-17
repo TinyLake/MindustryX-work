@@ -13,6 +13,7 @@ import mindustry.graphics.*;
 import mindustry.logic.*;
 import mindustry.world.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static mindustry.entities.Puddles.*;
 
@@ -165,6 +166,7 @@ public class Liquid extends UnlockableContent implements Senseable{
         stats.addPercent(Stat.temperature, temperature);
         stats.addPercent(Stat.heatCapacity, heatCapacity);
         stats.addPercent(Stat.viscosity, viscosity);
+        stats.add(StatExt.boilPoint,boilPoint);
     }
 
     @Override
