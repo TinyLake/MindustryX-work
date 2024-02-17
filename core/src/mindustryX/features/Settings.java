@@ -64,6 +64,7 @@ public class Settings{
             c.checkPref("bulletShow", true);
             c.checkPref("showMineBeam".toLowerCase(), true);
         }));
+        ArcOld.init(categories);
         Events.on(ClientLoadEvent.class, e -> {
             categories.each(LazySettingsCategory::init);
             Vars.ui.settings.getCategories().addAll(categories);
