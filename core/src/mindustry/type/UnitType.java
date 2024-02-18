@@ -37,6 +37,7 @@ import mindustry.world.blocks.payloads.*;
 import mindustry.world.blocks.units.*;
 import mindustry.world.consumers.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static arc.graphics.g2d.Draw.*;
 import static mindustry.Vars.*;
@@ -1207,7 +1208,7 @@ public class UnitType extends UnlockableContent implements Senseable{
 
         unit.drawBuilding();
 
-        drawMining(unit);
+        if(RenderExt.showMineBeam) drawMining(unit);
 
         boolean isPayload = !unit.isAdded();
 
