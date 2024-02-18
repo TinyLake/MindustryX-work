@@ -17,6 +17,7 @@ import mindustry.input.*;
 import mindustry.type.*;
 import mindustry.world.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -353,6 +354,20 @@ public class ItemBridge extends Block{
         @Override
         public void draw(){
             super.draw();
+
+            //draw each item this bridge have
+            if(items != null && RenderExt.hiddenItemTransparency > 0){
+                Draw.z(Layer.power + 0.1f);
+                Draw.color(Color.white, RenderExt.hiddenItemTransparency / 100f);
+                int loti = 0;
+                for(int iid = 0; iid < items.length(); iid++){
+                    for(int itemid = 1; itemid <= items.get(iid); itemid++){
+                        Draw.rect(content.item(iid).uiIcon,
+                        x, y - tilesize / 2f + 1f + 0.6f * (float)(loti++), 4f, 4f
+                        );
+                    }
+                }
+            }
 
             Draw.z(Layer.power);
 
