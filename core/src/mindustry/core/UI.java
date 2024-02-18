@@ -593,7 +593,7 @@ public class UI implements ApplicationListener, Loadable{
         t.touchable = Touchable.disabled;
         t.margin(8f).add(text).style(Styles.outlineLabel).labelAlign(Align.center);
         t.update(() -> t.setPosition(Core.graphics.getWidth()/2f, Core.graphics.getHeight()/2f, Align.center));
-        t.actions(Actions.fadeOut(duration, Interp.pow4In), Actions.remove());
+        t.actions(Actions.fadeOut(Math.min(duration,30f), Interp.pow4In), Actions.remove());
         t.pack();
         t.act(0.1f);
         Core.scene.add(t);
@@ -697,23 +697,7 @@ public class UI implements ApplicationListener, Loadable{
     }
 
     public static String formatAmount(long number){
-        //prevent things like bars displaying erroneous representations of casted infinities
-        if(number == Long.MAX_VALUE) return "∞";
-        if(number == Long.MIN_VALUE) return "-∞";
-
-        long mag = Math.abs(number);
-        String sign = number < 0 ? "-" : "";
-        if(mag >= 1_000_000_000){
-            return sign + Strings.fixed(mag / 1_000_000_000f, 1) + "[gray]" + billions + "[]";
-        }else if(mag >= 1_000_000){
-            return sign + Strings.fixed(mag / 1_000_000f, 1) + "[gray]" + millions + "[]";
-        }else if(mag >= 10_000){
-            return number / 1000 + "[gray]" + thousands + "[]";
-        }else if(mag >= 1000){
-            return sign + Strings.fixed(mag / 1000f, 1) + "[gray]" + thousands + "[]";
-        }else{
-            return number + "";
-        }
+        return FormatDefault.format(number);
     }
 
     public static int roundAmount(int number){

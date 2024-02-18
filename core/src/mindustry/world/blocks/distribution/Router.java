@@ -41,7 +41,8 @@ public class Router extends Block{
 
         @Override
         public boolean canControl(){
-            return size == 1;
+            //MDTX ARC: router YES, larger router YES
+            return size != 0;
         }
 
         @Override
