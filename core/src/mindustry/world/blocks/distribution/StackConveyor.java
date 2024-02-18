@@ -288,6 +288,8 @@ public class StackConveyor extends Block implements Autotiler{
                         poofOut();
                         lastItem = null;
                     }
+                    //MDTX: sometime get in dead loop
+                    if(lastItem != items.first()) break;
                 }
             }else{ //transfer
                 if(state != stateLoad || (items.total() >= getMaximumAccepted(lastItem))){

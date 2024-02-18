@@ -97,7 +97,9 @@ public class Schematics implements Loadable{
         all.sort();
 
         if(shadowBuffer == null){
-            Core.app.post(() -> shadowBuffer = new FrameBuffer(maxSchematicSize + padding + 8, maxSchematicSize + padding + 8));
+            //MDTX: support larger schematic, maxSchematicSize may be MAX_VALUE
+            var size = Math.min(maxSchematicSize, 1024) + padding + 8;
+            Core.app.post(() -> shadowBuffer = new FrameBuffer(size, size));
         }
     }
 
@@ -542,7 +544,7 @@ public class Schematics implements Loadable{
         try(DataInputStream stream = new DataInputStream(new InflaterInputStream(input))){
             short width = stream.readShort(), height = stream.readShort();
 
-            if(width > 128 || height > 128) throw new IOException("Invalid schematic: Too large (max possible size is 128x128)");
+            if(width > 1024 || height > 1024) throw new IOException("Invalid schematic: Too large (max possible size is 128x128)");
 
             StringMap map = new StringMap();
             int tags = stream.readUnsignedByte();
@@ -568,7 +570,7 @@ public class Schematics implements Loadable{
 
             int total = stream.readInt();
 
-            if(total > 128 * 128) throw new IOException("Invalid schematic: Too many blocks.");
+            if(maxSchematicSize != Integer.MAX_VALUE && total > maxSchematicSize * maxSchematicSize) throw new IOException("Invalid schematic: Too many blocks.");
 
             Seq<Stile> tiles = new Seq<>(total);
             for(int i = 0; i < total; i++){

@@ -45,7 +45,7 @@ public class Renderer implements ApplicationListener{
     public boolean animateShields, drawWeather = true, drawStatus, enableEffects, drawDisplays = true, drawLight = true, pixelate = false;
     public float weatherAlpha;
     /** minZoom = zooming out, maxZoom = zooming in */
-    public float minZoom = 1.5f, maxZoom = 6f;
+    public float minZoom = 0.25f, maxZoom = 20f;
     public Seq<EnvRenderer> envRenderers = new Seq<>();
     public ObjectMap<String, Runnable> customBackgrounds = new ObjectMap<>();
     public TextureRegion[] bubbles = new TextureRegion[16], splashes = new TextureRegion[12];
@@ -160,7 +160,7 @@ public class Renderer implements ApplicationListener{
             baseTarget = Mathf.lerp(minZoom, maxZoom, control.input.logicCutsceneZoom);
         }
 
-        float dest = Mathf.clamp(Mathf.round(baseTarget, 0.5f), minScale(), maxScale());
+        float dest = Mathf.clamp(Mathf.round(baseTarget, 0.1f), minScale(), maxScale());
         camerascale = Mathf.lerpDelta(camerascale, dest, 0.1f);
         if(Mathf.equal(camerascale, dest, 0.001f)) camerascale = dest;
         laserOpacity = settings.getInt("lasersopacity") / 100f;
@@ -475,7 +475,7 @@ public class Renderer implements ApplicationListener{
     }
 
     public void scaleCamera(float amount){
-        targetscale *= (amount / 4) + 1;
+        targetscale *= (amount / 6) + 1;
         clampScale();
     }
 
