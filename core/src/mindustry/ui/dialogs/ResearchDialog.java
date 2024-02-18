@@ -27,6 +27,7 @@ import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.ui.layout.*;
 import mindustry.ui.layout.TreeLayout.*;
+import mindustryX.features.*;
 
 import java.util.*;
 
@@ -349,7 +350,7 @@ public class ResearchDialog extends BaseDialog{
     }
 
     void checkNodes(TechTreeNode node){
-        boolean locked = locked(node.node);
+        boolean locked = !RenderExt.researchViewer && locked(node.node);
         if(!locked && (node.parent == null || node.parent.visible)) node.visible = true;
         node.selectable = selectable(node.node);
         for(TechTreeNode l : node.children){
@@ -463,7 +464,7 @@ public class ResearchDialog extends BaseDialog{
                     button.setPosition(node.x + panX + width / 2f, node.y + panY + height / 2f + offset, Align.center);
                     button.getStyle().up = !locked(node.node) ? Tex.buttonOver : !selectable(node.node) || !canSpend(node.node) ? Tex.buttonRed : Tex.button;
 
-                    ((TextureRegionDrawable)button.getStyle().imageUp).setRegion(node.selectable ? node.node.content.uiIcon : Icon.lock.getRegion());
+                    ((TextureRegionDrawable)button.getStyle().imageUp).setRegion(node.selectable || RenderExt.researchViewer ? node.node.content.uiIcon : Icon.lock.getRegion());
                     button.getImage().setColor(!locked(node.node) ? Color.white : node.selectable ? Color.gray : Pal.gray);
                     button.getImage().layout();
                 });
@@ -603,13 +604,13 @@ public class ResearchDialog extends BaseDialog{
             infoTable.table(b -> {
                 b.margin(0).left().defaults().left();
 
-                if(selectable){
+                if(selectable || RenderExt.researchViewer){
                     b.button(Icon.info, Styles.flati, () -> ui.content.show(node.content)).growY().width(50f);
                 }
                 b.add().grow();
                 b.table(desc -> {
                     desc.left().defaults().left();
-                    desc.add(selectable ? node.content.localizedName : "[accent]???");
+                    desc.add(selectable ? node.content.localizedName : RenderExt.researchViewer ? node.content.localizedName + "\n[red]未满足前置科技" : "[accent]???");
                     desc.row();
                     if(locked(node) || debugShowRequirements){
 
