@@ -198,6 +198,8 @@ public class NetClient implements ApplicationListener{
 
     @Remote(targets = Loc.server, variants = Variant.both)
     public static void sendMessage(String message, @Nullable String unformatted, @Nullable Player playersender){
+        message = mindustryX.Hooks.onHandleSendMessage(message, playersender);
+        if(message == null) return;
         if(Vars.ui != null){
             Vars.ui.chatfrag.addMessage(message);
             Sounds.chatMessage.play();
@@ -215,6 +217,8 @@ public class NetClient implements ApplicationListener{
     //equivalent to above method but there's no sender and no console log
     @Remote(called = Loc.server, targets = Loc.server)
     public static void sendMessage(String message){
+        message = mindustryX.Hooks.onHandleSendMessage(message, null);
+        if(message == null) return;
         if(Vars.ui != null){
             Vars.ui.chatfrag.addMessage(message);
             Sounds.chatMessage.play();
