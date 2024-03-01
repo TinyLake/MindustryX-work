@@ -24,6 +24,7 @@ public class Hooks implements ApplicationListener{
         if(!Vars.headless){
             RenderExt.init();
             TimeControl.init();
+            UIExt.init();
         }
     }
 
