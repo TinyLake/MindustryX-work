@@ -17,6 +17,7 @@ public class UIExt{
     public static ModsRecommendDialog modsRecommend = new ModsRecommendDialog();
     public static TeamsStatDisplay teamsStatDisplay;
     public static HudSettingsTable hudSettingsTable = new HudSettingsTable();
+    public static AdvanceToolTable advanceToolTable = new AdvanceToolTable();
     public static AdvanceBuildTool advanceBuildTool = new AdvanceBuildTool();
 
     public static void init(){
@@ -30,9 +31,10 @@ public class UIExt{
         });
 
         ui.hudGroup.fill(t -> {
-            t.name = "quickTool";
-            t.right().add(hudSettingsTable).growX();
-            t.row().add(advanceBuildTool).growX();
+            t.right().name = "quickTool";
+            t.add(hudSettingsTable).growX().row();
+            t.add(advanceToolTable).growX().row();
+            t.add(advanceBuildTool).growX().row();
             t.visible(() -> ui.hudfrag.shown && Core.settings.getBool("showQuickToolTable"));
         });
     }
