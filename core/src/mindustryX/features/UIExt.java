@@ -5,11 +5,15 @@ import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import mindustry.content.*;
+import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
 
 public class UIExt{
+    public static TeamSelectDialog teamSelect;
+
     public static void init(){
+        teamSelect = new TeamSelectDialog();
     }
 
     public static void buildPositionRow(Table tt, Vec2 vec){
