@@ -1,0 +1,128 @@
+package mindustryX.features.ui
+
+import arc.Core
+import arc.Events
+import arc.math.Mathf
+import arc.struct.Seq
+import arc.util.Reflect
+import mindustry.Vars
+import mindustry.content.Items
+import mindustry.content.UnitTypes
+import mindustry.game.EventType
+import mindustry.game.Team
+import mindustry.gen.Icon
+import mindustry.gen.Iconc
+import mindustry.gen.Payloadc
+import mindustry.gen.Unit
+import mindustry.ui.Styles
+import mindustry.world.blocks.payloads.Payload
+import mindustryX.features.LogicExt
+import mindustryX.features.Settings
+import mindustryX.features.TimeControl
+import mindustryX.features.UIExt
+
+//move from mindustry.arcModule.ui.AdvanceToolTable
+class AdvanceToolTable : ToolTableBase() {
+    companion object {
+        @JvmField
+        var worldCreator: Boolean = false
+
+        @JvmField
+        var forcePlacement: Boolean = false
+
+        @JvmField
+        var allBlocksReveal: Boolean = false
+    }
+
+    val factoryDialog: ArcUnitFactoryDialog = ArcUnitFactoryDialog()
+
+    init {
+        icon = Iconc.wrench.toString()
+        rebuild()
+        Events.on(EventType.ResetEvent::class.java) { _ ->
+            if (!Vars.state.rules.editor) {
+                worldCreator = false
+                forcePlacement = false
+                allBlocksReveal = false
+            }
+        }
+    }
+
+    override fun buildTable() {
+        with(table().get()) {
+            background = Styles.black6
+            row().add("单位：")
+            with(table().get()) {
+                button(Items.copper.emoji() + "[acid]+", Styles.cleart) {
+                    for (item in Vars.content.items()) Vars.player.core().items[item] = Vars.player.core().storageCapacity
+                }.width(40f).tooltip("[acid]填满核心的所有资源")
+                button(Items.copper.emoji() + "[red]-", Styles.cleart) {
+                    for (item in Vars.content.items()) Vars.player.core().items[item] = 0
+                }.width(40f).tooltip("[acid]清空核心的所有资源")
+                button(UnitTypes.gamma.emoji() + "[acid]+", Styles.cleart) {
+                    val cloneUnit = cloneExactUnit(Vars.player.unit())
+                    cloneUnit[Vars.player.x + Mathf.range(8f)] = Vars.player.y + Mathf.range(8f)
+                    cloneUnit.add()
+                }.width(40f).tooltip("[acid]克隆")
+                button(UnitTypes.gamma.emoji() + "[red]×", Styles.cleart) { Vars.player.unit().kill() }.width(40f).tooltip("[red]自杀")
+                button(Icon.waves, Styles.clearNonei) { factoryDialog.show() }.width(40f).tooltip("[acid]单位工厂-ARC")
+            }
+
+
+            row().add("队伍：")
+            with(table().get()) {
+                for (team in Team.baseTeams) {
+                    button(String.format("[#%s]%s", team.color, team.localized()), Styles.flatToggleMenut) { Vars.player.team(team) }
+                        .checked { Vars.player.team() === team }.size(30f, 30f)
+                }
+                button("[violet]+", Styles.flatToggleMenut) { UIExt.teamSelect.pickOne({ team: Team? -> Vars.player.team(team) }, Vars.player.team()) }
+                    .checked { !Seq.with(*Team.baseTeams).contains(Vars.player.team()) }
+                    .tooltip("[acid]更多队伍选择").size(30f, 30f)
+            }
+
+            row().add("建筑：")
+            with(table().get()) {
+                button("创世神", Styles.flatToggleMenut) { worldCreator = !worldCreator }
+                    .checked { worldCreator }.size(70f, 30f)
+                button("强制放置", Styles.flatToggleMenut) { forcePlacement = !forcePlacement }
+                    .checked { forcePlacement }.size(72f, 30f)
+                button("解禁", Styles.flatToggleMenut) {
+                    allBlocksReveal = !allBlocksReveal
+                    Reflect.invoke<Any>(Vars.ui.hudfrag.blockfrag, "rebuild")
+                }.checked { allBlocksReveal }
+                    .tooltip("[acid]显示并允许建造所有物品").size(50f, 30f)
+                button("地形蓝图", Styles.flatToggleMenut) { Settings.toggle("terrainSchematic") }
+                    .checked { LogicExt.terrainSchematic }.size(72f, 30f)
+            }
+
+            row().add("规则：")
+            with(table().get()) {
+                button("无限火力", Styles.flatToggleMenut) { Vars.player.team().rules().cheat = !Vars.player.team().rules().cheat }
+                    .checked { Vars.player.team().rules().cheat }.tooltip("[acid]开关自己队的无限火力").size(90f, 30f)
+                button("编辑器", Styles.flatToggleMenut) { Vars.state.rules.editor = !Vars.state.rules.editor }
+                    .checked { Vars.state.rules.editor }.size(70f, 30f)
+                button("沙盒", Styles.flatToggleMenut) { Vars.state.rules.infiniteResources = !Vars.state.rules.infiniteResources }
+                    .checked { Vars.state.rules.infiniteResources }.size(50f, 30f)
+            }
+
+            row().add("沙漏：")
+            table(TimeControl::draw)
+        }
+    }
+
+    private fun cloneExactUnit(unit: Unit): Unit {
+        val reUnit = unit.type.create(unit.team)
+        reUnit.health = unit.health
+        reUnit.shield = unit.shield
+        reUnit.stack = unit.stack
+
+        for (effects in Vars.content.statusEffects()) {
+            if (unit.getDuration(effects) > 0f) reUnit.apply(effects, unit.getDuration(effects))
+        }
+
+        if (unit is Payloadc && reUnit is Payloadc) {
+            unit.payloads().each { load: Payload? -> reUnit.addPayload(load) }
+        }
+        return reUnit
+    }
+}
