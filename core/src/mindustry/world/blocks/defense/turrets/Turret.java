@@ -7,6 +7,7 @@ import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
+import arc.scene.ui.layout.Table;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
@@ -677,6 +678,14 @@ public class Turret extends ReloadTurret{
 
             rotation = oldRot;
             reloadCounter = oldReload;
+        }
+
+        @Override
+        public void displayBars(Table bars) {
+            super.displayBars(bars);
+            if (minWarmup > 0f) {
+                bars.add(new Bar(() -> Core.bundle.format("bar.warmupDetail", (int)(shootWarmup * 100 / minWarmup)), () -> Pal.ammo, () -> shootWarmup / minWarmup)).row();
+            }
         }
     }
 
