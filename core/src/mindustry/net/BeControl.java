@@ -35,19 +35,11 @@ public class BeControl{
     }
 
     public BeControl(){
-        if(active()){
-            Timer.schedule(() -> {
-                if((Vars.clientLoaded || headless) && checkUpdates && !mobile){
-                    checkUpdate(t -> {});
-                }
-            }, updateInterval, updateInterval);
-        }
-
         if(OS.hasProp("becopy")){
             try{
                 Fi dest = Fi.get(OS.prop("becopy"));
                 Fi self = Fi.get(BeControl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
-                
+
                 for(Fi file : self.parent().findAll(f -> !f.equals(self))) file.delete();
 
                 self.copyTo(dest);
