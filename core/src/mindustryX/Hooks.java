@@ -3,6 +3,8 @@ package mindustryX;
 import arc.*;
 import arc.files.*;
 import arc.util.*;
+import mindustry.*;
+import mindustryX.features.*;
 
 import java.net.*;
 import java.util.*;
@@ -18,6 +20,9 @@ public class Hooks implements ApplicationListener{
     @Override
     public void init(){
         Log.infoTag("MindustryX", "Hooks.init");
+        if(!Vars.headless){
+            RenderExt.init();
+        }
     }
 
     @SuppressWarnings("unused")//call before arc.util.Http$HttpRequest.block
