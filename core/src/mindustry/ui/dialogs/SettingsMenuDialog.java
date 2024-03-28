@@ -24,6 +24,7 @@ import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.input.*;
 import mindustry.ui.*;
+import mindustryX.*;
 
 import java.io.*;
 import java.util.zip.*;
@@ -49,10 +50,7 @@ public class SettingsMenuDialog extends BaseDialog{
         cont.add(main = new SettingsTable());
         shouldPause = true;
 
-        shown(() -> {
-            back();
-            rebuildMenu();
-        });
+        shown(this::back);
 
         onResize(() -> {
             graphics.rebuild();
@@ -277,12 +275,6 @@ public class SettingsMenuDialog extends BaseDialog{
         menu.button("@settings.game", Icon.settings, style, isize, () -> visible(0)).marginLeft(marg).row();
         menu.button("@settings.graphics", Icon.image, style, isize, () -> visible(1)).marginLeft(marg).row();
         menu.button("@settings.sound", Icon.filters, style, isize, () -> visible(2)).marginLeft(marg).row();
-        menu.button("@settings.language", Icon.chat, style, isize, ui.language::show).marginLeft(marg).row();
-        if(!mobile || Core.settings.getBool("keyboard")){
-            menu.button("@settings.controls", Icon.move, style, isize, ui.controls::show).marginLeft(marg).row();
-        }
-
-        menu.button("@settings.data", Icon.save, style, isize, () -> dataDialog.show()).marginLeft(marg).row();
 
         int i = 3;
         for(var cat : categories){
@@ -294,6 +286,13 @@ public class SettingsMenuDialog extends BaseDialog{
             }
             i++;
         }
+
+        menu.button("@settings.language", Icon.chat, style, isize, ui.language::show).marginLeft(marg).row();
+        if(!mobile || Core.settings.getBool("keyboard")){
+            menu.button("@settings.controls", Icon.move, style, isize, ui.controls::show).marginLeft(marg).row();
+        }
+
+        menu.button("@settings.data", Icon.save, style, isize, () -> dataDialog.show()).marginLeft(marg).row();
     }
 
     void addSettings(){
@@ -378,7 +377,7 @@ public class SettingsMenuDialog extends BaseDialog{
 
         graphics.sliderPref("screenshake", 4, 0, 8, i -> (i / 4f) + "x");
 
-        graphics.sliderPref("bloomintensity", 6, 0, 16, i -> (int)(i/4f * 100f) + "%");
+        graphics.sliderPref("bloomintensity", 6, 0, 16, i -> (int)(i / 4f * 100f) + "%");
         graphics.sliderPref("bloomblur", 2, 1, 16, i -> i + "x");
 
         graphics.sliderPref("fpscap", 240, 10, 245, 5, s -> (s > 240 ? Core.bundle.get("setting.fpscap.none") : Core.bundle.format("setting.fpscap.text", s)));
@@ -571,13 +570,13 @@ public class SettingsMenuDialog extends BaseDialog{
     private void visible(int index){
         prefs.clearChildren();
 
-        Seq<Table> tables = new Seq<>();
+        Seq<SettingsTable> tables = new Seq<>();
         tables.addAll(game, graphics, sound);
         for(var custom : categories){
             tables.add(custom.table);
         }
 
-        prefs.add(tables.get(index));
+        prefs.add(tables.get(index).rebuild2());
     }
 
     @Override
@@ -619,13 +618,31 @@ public class SettingsMenuDialog extends BaseDialog{
             table = new SettingsTable();
             builder.get(table);
         }
+
+        @MindustryXApi
+        public void rebuild(){
+            table.reset();
+            builder.get(table);
+            table.rebuild();
+        }
     }
 
     public static class SettingsTable extends Table{
         protected Seq<Setting> list = new Seq<>();
+        private int lastSize;
 
+        @Deprecated()//MDTX: recommend SettingsCategory
         public SettingsTable(){
             left();
+        }
+
+        @Override
+        public void act(float delta){
+            if(lastSize != list.size){
+                lastSize = list.size;
+                rebuild();
+            }
+            super.act(delta);
         }
 
         public Seq<Setting> getSettings(){
@@ -634,7 +651,6 @@ public class SettingsMenuDialog extends BaseDialog{
 
         public void pref(Setting setting){
             list.add(setting);
-            rebuild();
         }
 
         public SliderSetting sliderPref(String name, int def, int min, int max, StringProcessor s){
@@ -645,47 +661,55 @@ public class SettingsMenuDialog extends BaseDialog{
             SliderSetting res;
             list.add(res = new SliderSetting(name, def, min, max, step, s));
             settings.defaults(name, def);
-            rebuild();
             return res;
         }
 
         public void checkPref(String name, boolean def){
             list.add(new CheckSetting(name, def, null));
             settings.defaults(name, def);
-            rebuild();
         }
 
         public void checkPref(String name, boolean def, Boolc changed){
             list.add(new CheckSetting(name, def, changed));
             settings.defaults(name, def);
-            rebuild();
+        }
+
+        public void addCategory(String name){
+            list.add(new Divider(name, bundle.get("category." + name + ".name")));
         }
 
         public void textPref(String name, String def){
             list.add(new TextSetting(name, def, null));
             settings.defaults(name, def);
-            rebuild();
         }
 
         public void textPref(String name, String def, Cons<String> changed){
             list.add(new TextSetting(name, def, changed));
             settings.defaults(name, def);
-            rebuild();
         }
 
         public void areaTextPref(String name, String def){
             list.add(new AreaTextSetting(name, def, null));
             settings.defaults(name, def);
-            rebuild();
         }
 
         public void areaTextPref(String name, String def, Cons<String> changed){
             list.add(new AreaTextSetting(name, def, changed));
             settings.defaults(name, def);
-            rebuild();
+        }
+
+        public void reset(){
+            clearChildren();
+            list.clear();
         }
 
         public void rebuild(){
+            rebuild2();
+        }
+
+        @MindustryXApi//return Table
+        public Table rebuild2(){
+            if(list.isEmpty()) return this;
             clearChildren();
 
             for(Setting setting : list){
@@ -699,6 +723,7 @@ public class SettingsMenuDialog extends BaseDialog{
                 }
                 rebuild();
             }).margin(14).width(240f).pad(6);
+            return this;
         }
 
         public abstract static class Setting{
@@ -787,6 +812,20 @@ public class SettingsMenuDialog extends BaseDialog{
             }
         }
 
+        public static class Divider extends Setting{
+
+            Divider(String name, String title){
+                super(name);
+                this.title = title;
+            }
+
+            @Override
+            public void add(SettingsTable table){
+                table.add(title).color(Pal.accent).colspan(4).pad(10).padTop(15).padBottom(4).row();
+                table.image().color(Pal.accent).fillX().height(3).colspan(4).padTop(0).padBottom(10).row();
+            }
+        }
+
         public static class TextSetting extends Setting{
             String def;
             Cons<String> changed;
@@ -810,9 +849,9 @@ public class SettingsMenuDialog extends BaseDialog{
                     }
                 });
 
-                Table prefTable = table.table().left().padTop(3f).get();
-                prefTable.add(field);
-                prefTable.label(() -> title);
+                Table prefTable = table.table().left().padTop(3f).fillX().get();
+                prefTable.label(() -> title).padRight(8f);
+                prefTable.add(field).growX();
                 addDesc(prefTable);
                 table.row();
             }
