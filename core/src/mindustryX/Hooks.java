@@ -6,6 +6,7 @@ import arc.util.*;
 import mindustry.*;
 import mindustry.gen.*;
 import mindustryX.features.*;
+import mindustryX.features.Settings;
 
 import java.net.*;
 import java.util.*;
@@ -15,6 +16,7 @@ public class Hooks implements ApplicationListener{
     public static void beforeInit(){
         Log.infoTag("MindustryX", "Hooks.beforeInit");
         registerBundle();
+        Settings.addSettings();
     }
 
     /** invoke after loading, just before `Mod::init` */
