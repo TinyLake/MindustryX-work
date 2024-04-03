@@ -13,13 +13,14 @@ import mindustry.gen.*;
 import static mindustry.Vars.*;
 
 public class Minimap extends Table{
+    private final Cell<?> mapCell;
 
     public Minimap(){
         background(Tex.pane);
         float margin = 5f;
         this.touchable = Touchable.enabled;
 
-        add(new Element(){
+        mapCell = add(new Element(){
             {
                 setSize(Scl.scl(140f));
 
@@ -42,9 +43,18 @@ public class Minimap extends Table{
 
             @Override
             public void act(float delta){
+                var size = Core.settings.getInt("minimapSize");
+                mapCell.size(size);
+                setSize(Scl.scl(size));
                 setPosition(Scl.scl(margin), Scl.scl(margin));
 
                 super.act(delta);
+            }
+
+            @Override
+            protected void sizeChanged(){
+                super.sizeChanged();
+                mapCell.getTable().invalidate();
             }
 
             @Override
@@ -56,7 +66,7 @@ public class Minimap extends Table{
 
                 if(renderer.minimap.getTexture() != null){
                     Draw.alpha(parentAlpha);
-                    renderer.minimap.drawEntities(x, y, width, height, 0.75f, false);
+                    renderer.minimap.drawEntities(x, y, width, height, 3f / renderer.minimap.getZoom(), false);
                 }
 
                 clipEnd();
