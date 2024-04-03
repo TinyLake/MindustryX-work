@@ -269,6 +269,7 @@ public class Vars implements Loadable{
     }
 
     public static void init(){
+        mindustryX.Hooks.beforeInit();
         Groups.init();
 
         if(loadLocales){
