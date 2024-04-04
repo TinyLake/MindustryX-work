@@ -25,6 +25,9 @@ public class RenderExt{
     public static int hiddenItemTransparency;
     public static int blockBarMinHealth;
     public static float overdriveZoneTransparency;
+
+    public static boolean unitHide = false;
+
     private static Effect placementEffect;
 
     public static void init(){
@@ -41,7 +44,7 @@ public class RenderExt{
 
         Events.run(Trigger.preDraw, () -> {
             bulletShow = Core.settings.getBool("bulletShow");
-            showMineBeam = Core.settings.getBool("showminebeam");
+            showMineBeam = !unitHide && Core.settings.getBool("showminebeam");
             displayAllMessage = Core.settings.getBool("displayallmessage");
             arcChoiceUiIcon = Core.settings.getBool("arcchoiceuiIcon");
             researchViewer = Core.settings.getBool("researchViewer");

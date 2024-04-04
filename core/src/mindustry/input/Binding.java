@@ -100,7 +100,7 @@ public enum Binding implements KeyBind{
     console(KeyCode.f8),
 
     //MDTX
-    mindustryX(KeyCode.unknown, "mindustryX"),
+    toggle_unit(KeyCode.unknown, "mindustryX"),
     ;
 
     private final KeybindValue defaultValue;
