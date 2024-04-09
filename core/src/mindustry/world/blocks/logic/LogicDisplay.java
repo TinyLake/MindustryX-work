@@ -16,6 +16,7 @@ import mindustry.graphics.*;
 import mindustry.ui.*;
 import mindustry.world.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 public class LogicDisplay extends Block{
     public static final byte
@@ -73,7 +74,7 @@ public class LogicDisplay extends Block{
 
         @Override
         public void draw(){
-            super.draw();
+            if(!RenderExt.logicDisplayNoBorder) super.draw();
 
             //don't even bother processing anything when displays are off.
             if(!Vars.renderer.drawDisplays) return;
@@ -152,6 +153,10 @@ public class LogicDisplay extends Block{
             Draw.blend(Blending.disabled);
             Draw.draw(Draw.z(), () -> {
                 if(buffer != null){
+                    if(RenderExt.logicDisplayNoBorder){
+                        Draw.rect(Draw.wrap(buffer.getTexture()), x, y, (buffer.getWidth() + 16) * Draw.scl, -(buffer.getHeight() + 16) * Draw.scl);
+                        return;
+                    }
                     Draw.rect(Draw.wrap(buffer.getTexture()), x, y, buffer.getWidth() * scaleFactor * Draw.scl, -buffer.getHeight() * scaleFactor * Draw.scl);
                 }
             });

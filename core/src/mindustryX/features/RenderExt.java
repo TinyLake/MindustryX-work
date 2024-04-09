@@ -3,16 +3,19 @@ package mindustryX.features;
 import arc.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
+import arc.math.*;
 import arc.util.*;
 import mindustry.entities.*;
 import mindustry.game.EventType.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import mindustry.type.*;
 import mindustry.world.*;
 import mindustry.world.blocks.defense.*;
 import mindustry.world.blocks.defense.turrets.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
+import mindustry.world.blocks.production.Drill.*;
 import mindustry.world.blocks.storage.*;
 
 import static mindustry.Vars.tilesize;
@@ -25,6 +28,7 @@ public class RenderExt{
     public static int hiddenItemTransparency;
     public static int blockBarMinHealth;
     public static float overdriveZoneTransparency, mendZoneTransparency;
+    public static boolean logicDisplayNoBorder, arcDrillMode;
 
     public static boolean unitHide = false;
     private static Effect placementEffect;
@@ -52,6 +56,8 @@ public class RenderExt{
             blockBarMinHealth = Core.settings.getInt("blockbarminhealth");
             overdriveZoneTransparency = Core.settings.getInt("overdrive_zone") / 100f;
             mendZoneTransparency = Core.settings.getInt("mend_zone") / 100f;
+            logicDisplayNoBorder = Core.settings.getBool("arclogicbordershow");
+            arcDrillMode = Core.settings.getBool("arcdrillmode");
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);
@@ -70,6 +76,8 @@ public class RenderExt{
         block.drawBase(tile);
         if(displayAllMessage && build instanceof MessageBuild)
             Draw.draw(Layer.overlayUI - 0.1f, build::drawSelect);
+        if(arcDrillMode && build instanceof DrillBuild drill)
+            arcDrillModeDraw(block, drill);
     }
 
     private static void placementEffect(float x, float y, float lifetime, float range, Color color){
@@ -92,6 +100,25 @@ public class RenderExt{
                 placementEffect(build.x, build.y, 120f, t.range, t.baseColor);
             else if(build.block instanceof LogicBlock t)
                 placementEffect(build.x, build.y, 120f, t.range, t.mapColor);
+        }
+    }
+
+    /** 在转头旁边显示矿物类型 */
+    private static void arcDrillModeDraw(Block block, DrillBuild build){
+        Item dominantItem = build.dominantItem;
+        if(dominantItem == null) return;
+        int size = block.size;
+        float dx = build.x - size * tilesize / 2f + 5, dy = build.y - size * tilesize / 2f + 5;
+        float iconSize = 5f;
+        Draw.rect(dominantItem.fullIcon, dx, dy, iconSize, iconSize);
+        Draw.reset();
+
+        float eff = Mathf.lerp(0, 1, Math.min(1f, (float)build.dominantItems / (size * size)));
+        if(eff < 0.9f){
+            Draw.alpha(0.5f);
+            Draw.color(dominantItem.color);
+            Lines.stroke(1f);
+            Lines.arc(dx, dy, iconSize * 0.75f, eff);
         }
     }
 }
