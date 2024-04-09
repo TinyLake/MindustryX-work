@@ -107,7 +107,7 @@ public class NetworkIO{
         buffer.putInt(Core.settings.getInt("totalPlayers", Groups.player.size()));
         buffer.putInt(state.wave);
         buffer.putInt(Version.build);
-        writeString(buffer, Version.type);
+        writeString(buffer, "MindustryX");
 
         buffer.put((byte)state.rules.mode().ordinal());
         buffer.putInt(netServer.admins.getPlayerLimit());
