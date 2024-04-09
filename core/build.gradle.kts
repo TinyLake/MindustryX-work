@@ -46,7 +46,7 @@ tasks{
         property("type", findProperty("versionType") ?: "official")
         property("modifier", findProperty("versionModifier") ?: "release")
         property("number", '7')
-        property("build", findProperty("buildversion") ?: "custom build")
+        property("build", findProperty("upstreamBuild") ?: "custom build")
     }
     processResources.configure {
         dependsOn(generateLocales, generateBasePartNames, writeVersion)

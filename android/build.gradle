@@ -18,7 +18,7 @@ configurations{ natives }
 
 repositories{
     mavenCentral()
-    maven{ url "https://maven.google.com" }
+    maven{ url "https://dl.google.com/dl/android/maven2/" }
 }
 
 android{
@@ -48,7 +48,7 @@ android{
         Integer vcode = props['androidBuildCode']?.toInteger() ?: 1
         def versionNameResult = "$versionNumber-$versionType-${getBuildVersion().replace(" ", "-")}"
 
-        applicationId "io.anuke.mindustry"
+        applicationId "com.github.tinylake.mindustryX"
         minSdkVersion 14
         targetSdkVersion 33
         
