@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     java
     kotlin("jvm")
+    id("mindustryX.buildExt")
 }
 sourceSets.main {
     java.setSrcDirs(listOf("src/", layout.buildDirectory.dir("/generated/sources/annotationProcessor/java/main")))

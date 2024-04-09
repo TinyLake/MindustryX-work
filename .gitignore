@@ -1,4 +1,6 @@
+build/
 logs/
+
 /fastlane/metadata/android/en-US/changelogs/
 /core/assets/mindustry-saves/
 /core/assets/mindustry-maps/
@@ -20,10 +22,6 @@ ios/libs/
 /core/assets-raw/sprites_out/
 /annotations/build/
 /annotations/out/
-/net/build/
-/tools/build/
-/tests/build/
-/server/build/
 changelog
 saves/
 /core/assets-raw/fontgen/out/
