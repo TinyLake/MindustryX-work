@@ -59,3 +59,9 @@ jobs:
           target_commitish: ${{github.sha}}
           files: artifacts/*
           prerelease: true
+      - uses: oven-sh/setup-bun@v1
+      - name: clearOldAssets
+        run: bun run .github/actions/clearOldAssets.ts
+        env:
+          GITHUB_TOKEN: ${{github.token}}
+          TAG: ${{ env.RELEASE_TAG }}
