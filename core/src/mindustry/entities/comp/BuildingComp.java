@@ -1099,10 +1099,11 @@ abstract class BuildingComp implements Posc, Teamc, Healthc, Buildingc, Timerc, 
     }
 
     public void updatePowerGraph(){
-        for(Building other : getPowerConnections(tempBuilds)){
-            if(other.power != null){
-                other.power.graph.addGraph(power.graph);
-            }
+        //MDTX: optimize from Foo client
+        var links = getPowerConnections(tempBuilds).add((Building)self());
+        var largest = links.max(l -> l.power.graph.all.size);
+        for(Building link : links){
+            largest.power.graph.addGraph(link.power.graph);
         }
     }
 
