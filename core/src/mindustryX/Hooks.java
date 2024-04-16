@@ -54,6 +54,15 @@ public class Hooks implements ApplicationListener{
         return message;
     }
 
+    @Override
+    public void update(){
+        pollKeys();
+    }
+
+    public static void pollKeys(){
+        if(Vars.headless || Core.scene.hasField()) return;
+    }
+
     private static void registerBundle(){
         //MDTX: bundle overwrite
         try{
