@@ -30,7 +30,7 @@ public class ChatFragment extends Table{
     private boolean shown = false;
     private TextField chatfield;
     private Label fieldlabel = new Label(">");
-    private ChatMode mode = ChatMode.normal;
+    public ChatMode mode = ChatMode.normal;
     private Font font;
     private GlyphLayout layout = new GlyphLayout();
     private float offsetx = Scl.scl(4), offsety = Scl.scl(4), fontoffsetx = Scl.scl(2), chatspace = Scl.scl(50);
@@ -290,7 +290,7 @@ public class ChatFragment extends Table{
         if(scrollPos > 0) scrollPos++;
     }
 
-    private enum ChatMode{
+    public enum ChatMode{
         normal(""),
         team("/t"),
         admin("/a", player::admin)

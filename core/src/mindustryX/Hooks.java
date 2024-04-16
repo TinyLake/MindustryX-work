@@ -52,6 +52,9 @@ public class Hooks implements ApplicationListener{
 
     public static @Nullable String onHandleSendMessage(String message, @Nullable Player sender){
         if(message == null) return null;
+        if(Vars.ui != null){
+            if(MarkerType.resolveMessage(message)) return message;
+        }
         return message;
     }
 
@@ -64,6 +67,12 @@ public class Hooks implements ApplicationListener{
         if(Vars.headless || Core.scene.hasField()) return;
         if(Core.input.keyTap(Binding.toggle_unit)){
             RenderExt.unitHide = !RenderExt.unitHide;
+        }
+        if(Core.input.keyTap(Binding.lockonLastMark)){
+            MarkerType.lockOnLastMark();
+        }
+        if(Core.input.keyTap(Binding.point)){
+            MarkerType.selected.markWithMessage(Core.input.mouseWorld());
         }
     }
 

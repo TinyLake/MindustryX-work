@@ -5,6 +5,8 @@ import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import mindustry.content.*;
+import mindustry.core.*;
+import mindustry.gen.*;
 import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
@@ -33,11 +35,20 @@ public class UIExt{
             y.setText(String.valueOf(vec.y));
         }).tooltip(b -> b.label(() -> "选择玩家当前位置：" + player.tileX() + "," + player.tileY())).height(50f);
 
-//            tt.button(StatusEffects.blasted.emoji(), () -> {
-//                if(Marker.markList.size == 0) return;
-//                vec.set(World.toTile(Marker.markList.peek().markPos.x), World.toTile(Marker.markList.peek().markPos.y));
-//                x.setText(World.toTile(Marker.markList.peek().markPos.x) + "");
-//                y.setText(World.toTile(Marker.markList.peek().markPos.y) + "");
-//            }).tooltip(Marker.markList.size == 0 ? "[red]未标记" : ("选择上个标记点：" + World.toTile(Marker.markList.peek().markPos.x) + "," + World.toTile(Marker.markList.peek().markPos.y))).height(50f);
+        tt.button(StatusEffects.blasted.emoji(), () -> {
+            var last = MarkerType.getLastPos();
+            if(last == null) return;
+            vec.set(World.toTile(last.getX()), World.toTile(last.getY()));
+            x.setText(String.valueOf(vec.x));
+            y.setText(String.valueOf(vec.y));
+        }).height(50f).tooltip((t) -> t.label(() -> {
+            var last = MarkerType.getLastPos();
+            if(last == null) return "[red]未标记";
+            return "选择上个标记点：" + FormatDefault.formatTile(last);
+        }));
+    }
+
+    public static void sendChatMessage(String message){
+        Call.sendChatMessage(ui.chatfrag.mode.normalizedPrefix() + message);
     }
 }
