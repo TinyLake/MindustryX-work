@@ -29,6 +29,7 @@ import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.storage.CoreBlock.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 import static mindustry.gen.Tex.*;
@@ -281,6 +282,12 @@ public class HudFragment{
                 IntFormat memnative = new IntFormat("memory2");
 
                 info.label(() -> fps.get(Core.graphics.getFramesPerSecond())).left().style(Styles.outlineLabel).name("fps");
+                info.row();
+                info.label(() -> Strings.format("LG/DW/UI(ms) @/@/@", Time.nanosToMillis(DebugUtil.logicTime), Time.nanosToMillis(DebugUtil.rendererTime), Time.nanosToMillis(DebugUtil.uiTime)))
+                .left().style(Styles.outlineLabel).name("cpuTime");
+                info.row();
+                info.label(() -> Strings.format("D/V/T/F @/@/@/@",
+                DebugUtil.lastDrawRequests, DebugUtil.lastVertices, DebugUtil.lastSwitchTexture, DebugUtil.lastFlushCount)).left().style(Styles.outlineLabel).name("draw");
                 info.row();
 
                 if(android){
