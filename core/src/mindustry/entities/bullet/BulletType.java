@@ -628,6 +628,7 @@ public class BulletType extends Content implements Cloneable{
         }
     }
 
+    private static Bullet argBullet;
     public void updateHoming(Bullet b){
         if(homingPower > 0.0001f && b.time >= homingDelay){
             float realAimX = b.aimX < 0 ? b.x : b.aimX;
@@ -635,20 +636,22 @@ public class BulletType extends Content implements Cloneable{
 
             Teamc target;
             //home in on allies if possible
+            argBullet = b;
             if(heals()){
                 target = Units.closestTarget(null, realAimX, realAimY, homingRange,
-                e -> e.checkTarget(collidesAir, collidesGround) && e.team != b.team && !b.hasCollided(e.id),
-                t -> collidesGround && (t.team != b.team || t.damaged()) && !b.hasCollided(t.id)
+                e -> e.checkTarget(collidesAir, collidesGround) && e.team != argBullet.team && !argBullet.hasCollided(e.id),
+                t -> collidesGround && (t.team != argBullet.team || t.damaged()) && !argBullet.hasCollided(t.id)
                 );
             }else{
                 if(b.aimTile != null && b.aimTile.build != null && b.aimTile.build.team != b.team && collidesGround && !b.hasCollided(b.aimTile.build.id)){
                     target = b.aimTile.build;
                 }else{
                     target = Units.closestTarget(b.team, realAimX, realAimY, homingRange,
-                        e -> e != null && e.checkTarget(collidesAir, collidesGround) && !b.hasCollided(e.id),
-                        t -> t != null && collidesGround && !b.hasCollided(t.id));
+                    e -> e != null && e.checkTarget(collidesAir, collidesGround) && !argBullet.hasCollided(e.id),
+                    t -> t != null && collidesGround && !argBullet.hasCollided(t.id));
                 }
             }
+            argBullet = null;
 
             if(target != null){
                 b.vel.setAngle(Angles.moveToward(b.rotation(), b.angleTo(target), homingPower * Time.delta * 50f));

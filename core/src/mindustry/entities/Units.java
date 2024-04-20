@@ -269,6 +269,10 @@ public class Units{
         }
     }
 
+    private static float rangeL, xL, yL;
+    private static Team teamL;
+    private static Boolf<Unit> predicateL;
+    private static Sortf sortL;
     /** Returns the closest enemy of this team. Filter by predicate. */
     public static Unit closestEnemy(Team team, float x, float y, float range, Boolf<Unit> predicate){
         if(team == Team.derelict) return null;
@@ -277,11 +281,16 @@ public class Units{
         cdist = 0f;
         cpriority = -99999f;
 
+        xL = x;
+        yL = y;
+        rangeL = range;
+        teamL = team;
+        predicateL = predicate;
         nearbyEnemies(team, x - range, y - range, range*2f, range*2f, e -> {
-            if(e.dead() || !predicate.get(e) || e.team == Team.derelict || !e.targetable(team) || e.inFogTo(team)) return;
+            if(e.dead() || !predicateL.get(e) || e.team == Team.derelict || !e.targetable(teamL) || e.inFogTo(teamL)) return;
 
-            float dst2 = e.dst2(x, y) - (e.hitSize * e.hitSize);
-            if(dst2 < range*range && (result == null || dst2 < cdist || e.type.targetPriority > cpriority) && e.type.targetPriority >= cpriority){
+            float dst2 = e.dst2(xL, yL) - (e.hitSize * e.hitSize);
+            if(dst2 < rangeL*rangeL && (result == null || dst2 < cdist || e.type.targetPriority > cpriority) && e.type.targetPriority >= cpriority){
                 result = e;
                 cdist = dst2;
                 cpriority = e.type.targetPriority;
@@ -299,10 +308,16 @@ public class Units{
         cdist = 0f;
         cpriority = -99999f;
 
+        xL = x;
+        yL = y;
+        rangeL = range;
+        teamL = team;
+        predicateL = predicate;
+        sortL = sort;
         nearbyEnemies(team, x - range, y - range, range*2f, range*2f, e -> {
-            if(e.dead() || !predicate.get(e) || e.team == Team.derelict || !e.within(x, y, range + e.hitSize/2f) || !e.targetable(team) || e.inFogTo(team)) return;
+            if(e.dead() || !predicateL.get(e) || e.team == Team.derelict || !e.within(xL, yL, rangeL + e.hitSize/2f) || !e.targetable(teamL) || e.inFogTo(teamL)) return;
 
-            float cost = sort.cost(e, x, y);
+            float cost = sortL.cost(e, xL, yL);
             if((result == null || cost < cdist || e.type.targetPriority > cpriority) && e.type.targetPriority >= cpriority){
                 result = e;
                 cdist = cost;
