@@ -30,6 +30,7 @@ import mindustry.ui.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.storage.CoreBlock.*;
 import mindustryX.features.*;
+import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
 import static mindustry.gen.Tex.*;
@@ -41,7 +42,7 @@ public class HudFragment{
     public boolean shown = true;
 
     private ImageButton flip;
-    private CoreItemsDisplay coreItems = new CoreItemsDisplay();
+    public NewCoreItemsDisplay coreItems = new NewCoreItemsDisplay();
 
     private String hudText = "";
     private boolean showHudText;
@@ -87,11 +88,6 @@ public class HudFragment{
 
         Events.on(SectorInvasionEvent.class, e -> {
             showToast(Icon.warning, Core.bundle.format("sector.attacked", e.sector.name()));
-        });
-
-        Events.on(ResetEvent.class, e -> {
-            coreItems.resetUsed();
-            coreItems.clear();
         });
 
         //paused table
@@ -318,8 +314,9 @@ public class HudFragment{
             t.collapser(v -> v.add().height(pauseHeight), () -> state.isPaused() && !netServer.isWaitingForPlayers()).row();
 
             t.table(c -> {
+                c.touchable = Touchable.disabled;
                 //core items
-                c.top().collapser(coreItems, () -> Core.settings.getBool("coreitems") && !mobile && shown).fillX().row();
+                c.top().add(coreItems).fillX().row();
 
                 float notifDuration = 240f;
                 float[] coreAttackTime = {0};
