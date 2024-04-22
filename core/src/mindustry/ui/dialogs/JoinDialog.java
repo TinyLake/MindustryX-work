@@ -60,21 +60,23 @@ public class JoinDialog extends BaseDialog{
 
         loadServers();
 
-        //mobile players don't get information >:(
-        boolean infoButton = !steam && !mobile;
-
-        if(infoButton) buttons.add().width(60f);
-        buttons.add().growX().width(-1);
+        //MDTX: keep for compatibility to CLaj Mod
+        buttons.add().width(Float.MIN_NORMAL).pad(0);
+        buttons.add().width(Float.MIN_NORMAL).pad(0);
 
         addCloseButton(mobile ? 190f : 210f);
-
         buttons.button("@server.add", Icon.add, () -> {
             renaming = null;
             add.show();
         });
-
-        buttons.add().growX().width(-1);
-        if(infoButton) buttons.button("?", () -> ui.showInfo("@join.info")).size(60f, 64f);
+        //MDTX: keep for compatibility to CLaj Mod
+        buttons.add().width(Float.MIN_NORMAL).pad(0);
+        buttons.add().width(Float.MIN_NORMAL).pad(0);
+        //MDTX: better fixed info button
+        buttons.addChild(new Table(t -> {
+            t.setFillParent(true);
+            t.right().bottom().button("?", () -> ui.showInfo("@join.info")).size(60f, 64f);
+        }));
 
         add = new BaseDialog("@joingame.title");
         add.cont.add("@joingame.ip").padRight(5f).left();
@@ -134,7 +136,7 @@ public class JoinDialog extends BaseDialog{
     }
 
     void refreshAll(){
-        refreshes ++;
+        refreshes++;
 
         refreshLocal();
         refreshRemote();
@@ -284,7 +286,7 @@ public class JoinDialog extends BaseDialog{
                 for(int i = 0; i < host.description.length(); i++){
                     char c = host.description.charAt(i);
                     if(c == '\n'){
-                        count ++;
+                        count++;
                         if(count < 3) result.append(c);
                     }else{
                         result.append(c);
@@ -295,7 +297,7 @@ public class JoinDialog extends BaseDialog{
             }
 
             t.add("[lightgray]" + (Core.bundle.format("players" + (host.players == 1 && host.playerLimit <= 0 ? ".single" : ""),
-                (host.players == 0 ? "[lightgray]" : "[accent]") + host.players + (host.playerLimit > 0 ? "[lightgray]/[accent]" + host.playerLimit : "")+ "[lightgray]"))).left().row();
+            (host.players == 0 ? "[lightgray]" : "[accent]") + host.players + (host.playerLimit > 0 ? "[lightgray]/[accent]" + host.playerLimit : "") + "[lightgray]"))).left().row();
 
             t.add("[lightgray]" + Core.bundle.format("save.map", host.mapname) + "[lightgray] / " + (host.modeName == null ? host.mode.toString() : host.modeName)).width(twidth).left().ellipsis(true).row();
 
@@ -358,7 +360,7 @@ public class JoinDialog extends BaseDialog{
                     showHidden = !showHidden;
                     refreshCommunity();
                 }).update(i -> i.getStyle().imageUp = (showHidden ? Icon.eyeSmall : Icon.eyeOffSmall))
-                    .size(40f).right().padRight(3).tooltip("@servers.showhidden");
+                .size(40f).right().padRight(3).tooltip("@servers.showhidden");
             }
 
             name.button(Icon.downOpen, Styles.emptyi, () -> {
@@ -391,13 +393,13 @@ public class JoinDialog extends BaseDialog{
         global.table(t -> {
             t.add("@search").padRight(10);
             t.field(serverSearch, text ->
-                serverSearch = text.trim().replaceAll(" +", " ").toLowerCase()
+            serverSearch = text.trim().replaceAll(" +", " ").toLowerCase()
             ).grow().pad(8).get().keyDown(KeyCode.enter, this::refreshCommunity);
             t.button(Icon.zoom, Styles.emptyi, this::refreshCommunity).size(54f);
         }).width((targetWidth() + 5f) * columns()).height(70f).pad(4).row();
 
-        for(int i = 0; i < defaultServers.size; i ++){
-            ServerGroup group = defaultServers.get((i + defaultServers.size/2) % defaultServers.size);
+        for(int i = 0; i < defaultServers.size; i++){
+            ServerGroup group = defaultServers.get((i + defaultServers.size / 2) % defaultServers.size);
             boolean hidden = group.hidden();
             if(hidden && !showHidden){
                 continue;
@@ -425,10 +427,10 @@ public class JoinDialog extends BaseDialog{
                     }
 
                     if(!serverSearch.isEmpty() && !(group.name.toLowerCase().contains(serverSearch)
-                        || res.name.toLowerCase().contains(serverSearch)
-                        || res.description.toLowerCase().contains(serverSearch)
-                        || res.mapname.toLowerCase().contains(serverSearch)
-                        || (res.modeName != null && res.modeName.toLowerCase().contains(serverSearch)))) return;
+                    || res.name.toLowerCase().contains(serverSearch)
+                    || res.description.toLowerCase().contains(serverSearch)
+                    || res.mapname.toLowerCase().contains(serverSearch)
+                    || (res.modeName != null && res.modeName.toLowerCase().contains(serverSearch)))) return;
 
                     if(groupTable[0] == null){
                         addHeader(groupTable, group, hidden, true);
@@ -464,11 +466,11 @@ public class JoinDialog extends BaseDialog{
             //button for showing/hiding servers
             ImageButton[] image = {null};
             image[0] = head.button(hidden ? Icon.eyeOffSmall : Icon.eyeSmall, Styles.grayi, () -> {
-               group.setHidden(!group.hidden());
-               image[0].getStyle().imageUp = group.hidden() ? Icon.eyeOffSmall : Icon.eyeSmall;
-               if(group.hidden() && !showHidden){
-                   groupTable[0].remove();
-               }
+                group.setHidden(!group.hidden());
+                image[0].getStyle().imageUp = group.hidden() ? Icon.eyeOffSmall : Icon.eyeSmall;
+                if(group.hidden() && !showHidden){
+                    groupTable[0].remove();
+                }
             }).size(40f).get();
             image[0].addListener(new Tooltip(t -> t.background(Styles.black6).margin(4).label(() -> !group.hidden() ? "@server.shown" : "@server.hidden")));
         }).width(targetWidth() * columns()).padBottom(-2).row();
@@ -597,9 +599,10 @@ public class JoinDialog extends BaseDialog{
                 ping.cancel();
                 ping = null;
                 connect(lastIp, lastPort);
-            }, exception -> {});
+            }, exception -> {
+            });
         }, 1, 1);
-        
+
         ui.loadfrag.setButton(() -> {
             ui.loadfrag.hide();
             if(ping == null) return;
@@ -611,7 +614,7 @@ public class JoinDialog extends BaseDialog{
     void safeConnect(String ip, int port, int version){
         if(version != Version.build && Version.build != -1 && version != -1){
             ui.showInfo("[scarlet]" + (version > Version.build ? KickReason.clientOutdated : KickReason.serverOutdated) + "\n[]" +
-                Core.bundle.format("server.versions", Version.build, version));
+            Core.bundle.format("server.versions", Version.build, version));
         }else{
             connect(ip, port);
         }
