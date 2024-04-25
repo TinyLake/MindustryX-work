@@ -2,6 +2,7 @@ package mindustryX
 
 import javassist.ClassPool
 import javassist.CtClass
+import javassist.Modifier
 import javassist.bytecode.Bytecode
 import javassist.bytecode.Descriptor
 import java.util.zip.ZipFile
@@ -28,6 +29,10 @@ abstract class PatchArc : TransformAction<TransformParameters.None> {
                 methodInfo.codeAttribute.iterator().insertEx(code.get())
                 methodInfo.rebuildStackMapIf6(classPool, classFile)
             }
+        },
+        "arc.graphics.g2d.DrawRequest" to clz@{
+            modifiers = modifiers or Modifier.PUBLIC
+//            addField(CtField.make("public int zOffset;", this@clz))
         }
     )
 
