@@ -30,6 +30,7 @@ public class RenderExt{
     public static float overdriveZoneTransparency, mendZoneTransparency;
     public static boolean logicDisplayNoBorder, arcDrillMode;
     public static int blockRenderLevel;
+    public static boolean renderSort;
 
     public static boolean unitHide = false;
     private static Effect placementEffect;
@@ -60,6 +61,7 @@ public class RenderExt{
             logicDisplayNoBorder = Core.settings.getBool("arclogicbordershow");
             arcDrillMode = Core.settings.getBool("arcdrillmode");
             blockRenderLevel = Core.settings.getInt("blockRenderLevel");
+            renderSort = Core.settings.getBool("renderSort");
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);

@@ -114,7 +114,7 @@ public class MultiPacker implements Disposable{
     //editor page (sprites5.png) - all sprites needed for rendering in the editor, including block icons and a few minor sprites
     public enum PageType{
         //main page can be massive, but 8192 throws GL_OUT_OF_MEMORY on some GPUs and I can't deal with it yet.
-        main(4096),
+        main(16384, 4096), //MDTX 更大图集
 
         //TODO stuff like this throws OOM on some devices
         environment(4096, 2048),
