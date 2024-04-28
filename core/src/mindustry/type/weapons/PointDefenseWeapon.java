@@ -1,11 +1,13 @@
 package mindustry.type.weapons;
 
+import arc.func.*;
 import arc.graphics.*;
 import arc.math.*;
 import arc.math.geom.*;
 import mindustry.content.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
+import mindustry.game.*;
 import mindustry.gen.*;
 import mindustry.type.*;
 
@@ -40,7 +42,27 @@ public class PointDefenseWeapon extends Weapon{
 
     @Override
     protected Teamc findTarget(Unit unit, float x, float y, float range, boolean air, boolean ground){
-        return Groups.bullet.intersect(x - range, y - range, range*2, range*2).min(b -> b.team != unit.team && b.type().hittable, b -> b.dst2(x, y));
+        return findEnemyBullet(unit.team, x, y, range);
+    }
+
+    public static Bullet findEnemyBullet(Team team, float x, float y, float range){
+        var t = new Cons<Bullet>(){
+            Bullet min;
+            float minV = Float.MAX_VALUE;
+
+            @Override
+            public void get(Bullet b){
+                if(b.team != team && b.type().hittable){
+                    float v = b.dst2(x, y);
+                    if(v < minV){
+                        min = b;
+                        minV = v;
+                    }
+                }
+            }
+        };
+        Groups.bullet.intersect(x - range, y - range, range * 2, range * 2, t);
+        return t.min;
     }
 
     @Override

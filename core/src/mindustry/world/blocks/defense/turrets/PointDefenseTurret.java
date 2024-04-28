@@ -12,6 +12,7 @@ import mindustry.content.*;
 import mindustry.entities.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import mindustry.type.weapons.*;
 import mindustry.world.meta.*;
 
 import static mindustry.Vars.*;
@@ -63,7 +64,7 @@ public class PointDefenseTurret extends ReloadTurret{
 
             //retarget
             if(timer(timerTarget, retargetTime)){
-                target = Groups.bullet.intersect(x - range, y - range, range*2, range*2).min(b -> b.team != team && b.type().hittable, b -> b.dst2(this));
+                target = PointDefenseWeapon.findEnemyBullet(team, x, y, range);
             }
 
             //pooled bullets
