@@ -1,0 +1,17 @@
+{
+  "lastUpdated": "2024/4/12 21:00",
+  "modRecommend": [
+    {
+      "repo": "eb-wilson/toomanyitems",
+      "reason": "Too Many Items(TMI)类似Minecraft的JEL物品管理器\n提供了检索物品、单位、方块、电力、热量的用途以及获取途径"
+    },
+    {
+      "repo": "mnemotechnician/new-console",
+      "reason": "NewConsole提供了新的控制台，方便调试者执行js代码\n1.保存js代码的执行记录\n2.读写简单js文件"
+    },
+    {
+      "repo": "way-zer/contentstweaker",
+      "reason": "ContentsTweaker(CT)允许地图调整内容、添加UI等"
+    }
+  ]
+}
