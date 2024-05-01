@@ -1,6 +1,7 @@
 package mindustry.ui.dialogs;
 
 import arc.*;
+import arc.Files.*;
 import arc.files.*;
 import arc.func.*;
 import arc.graphics.*;
@@ -27,6 +28,8 @@ import mindustry.io.*;
 import mindustry.mod.*;
 import mindustry.mod.Mods.*;
 import mindustry.ui.*;
+import mindustryX.features.*;
+import mindustryX.features.ui.*;
 
 import java.text.*;
 import java.util.*;
@@ -44,6 +47,12 @@ public class ModsDialog extends BaseDialog{
 
     private BaseDialog browser;
     private Table browserTable;
+
+    private final Seq<LoadedMod> internalMods = new Seq<>(), otherMods = new Seq<>();
+    private String modQuery;
+    private final Table modPane;
+
+    private float modCardWidth, modCardHeight = 110f;
     private float scroll = 0f;
 
     public ModsDialog(){
@@ -51,6 +60,7 @@ public class ModsDialog extends BaseDialog{
         addCloseButton();
 
         browser = new BaseDialog("@mods.browser");
+        modPane = new Table().margin(10f).top();
 
         browser.cont.table(table -> {
             table.left();
@@ -143,8 +153,19 @@ public class ModsDialog extends BaseDialog{
     }
 
     void setup(){
-        float h = 110f;
-        float w = Math.min(Core.graphics.getWidth() / Scl.scl(1.05f), 520f);
+        modCardWidth = Math.min(Core.graphics.getWidth() / Scl.scl(1.05f), 520f);
+
+        Seq<LoadedMod> modList = mods.list();
+        internalMods.clear();
+        otherMods.clear();
+
+        for(LoadedMod mod : modList){
+            if(mod.root.type() == FileType.internal){
+                internalMods.add(mod);
+            }else{
+                otherMods.add(mod);
+            }
+        }
 
         cont.clear();
         cont.defaults().width(Math.min(Core.graphics.getWidth() / Scl.scl(1.05f), 556f)).pad(4);
@@ -153,9 +174,9 @@ public class ModsDialog extends BaseDialog{
 
         cont.table(buttons -> {
             buttons.left().defaults().growX().height(60f).uniformX();
+            buttons.defaults().pad(4f).margin(12f);
 
             TextButtonStyle style = Styles.flatBordert;
-            float margin = 12f;
 
             buttons.button("@mod.import", Icon.add, style, () -> {
                 BaseDialog dialog = new BaseDialog("@mod.import");
@@ -200,125 +221,162 @@ public class ModsDialog extends BaseDialog{
 
                 dialog.show();
 
-            }).margin(margin);
+            });
 
-            buttons.button("@mods.browser", Icon.menu, style, this::showModBrowser).margin(margin);
-        }).width(w);
+            buttons.button("@mods.browser", Icon.menu, style, this::showModBrowser);
+
+            buttons.row();
+
+            buttons.button("@mods.recommend", Icon.list, style, UIExt.modsRecommend::show).colspan(2);
+        }).width(modCardWidth);
 
         cont.row();
 
         if(!mods.list().isEmpty()){
-            boolean[] anyDisabled = {false};
-            Table[] pane = {null};
-
-            Cons<String> rebuild = query -> {
-                pane[0].clear();
-                boolean any = false;
-                for(LoadedMod item : mods.list()){
-                    if(Strings.matches(query, item.meta.displayName)){
-                        any = true;
-                        if(!item.enabled() && !anyDisabled[0] && mods.list().size > 0){
-                            anyDisabled[0] = true;
-                            pane[0].row();
-                            pane[0].image().growX().height(4f).pad(6f).color(Pal.gray).row();
-                        }
-
-                        pane[0].button(t -> {
-                            t.top().left();
-                            t.margin(12f);
-
-                            String stateDetails = getStateDetails(item);
-                            if(stateDetails != null){
-                                t.addListener(new Tooltip(f -> f.background(Styles.black8).margin(4f).add(stateDetails).growX().width(400f).wrap()));
-                            }
-
-                            t.defaults().left().top();
-                            t.table(title1 -> {
-                                title1.left();
-
-                                title1.add(new BorderImage(){{
-                                    if(item.iconTexture != null){
-                                        setDrawable(new TextureRegion(item.iconTexture));
-                                    }else{
-                                        setDrawable(Tex.nomap);
-                                    }
-                                    border(Pal.accent);
-                                }}).size(h - 8f).padTop(-8f).padLeft(-8f).padRight(8f);
-
-                                title1.table(text -> {
-                                    boolean hideDisabled = !item.isSupported() || item.hasUnmetDependencies() || item.hasContentErrors();
-                                    String shortDesc = item.meta.shortDescription();
-
-                                    text.add("[accent]" + Strings.stripColors(item.meta.displayName) + "\n" +
-                                        (shortDesc.length() > 0 ? "[lightgray]" + shortDesc + "\n" : "")
-                                        //so does anybody care about version?
-                                        //+ "[gray]v" + Strings.stripColors(trimText(item.meta.version)) + "\n"
-                                        + (item.enabled() || hideDisabled ? "" : Core.bundle.get("mod.disabled") + ""))
-                                    .wrap().top().width(300f).growX().left();
-
-                                    text.row();
-
-                                    String state = getStateText(item);
-                                    if(state != null){
-                                        text.labelWrap(state).growX().row();
-                                    }
-                                }).top().growX();
-
-                                title1.add().growX();
-                            }).growX().growY().left();
-
-                            t.table(right -> {
-                                right.right();
-                                right.button(item.enabled() ? Icon.downOpen : Icon.upOpen, Styles.clearNonei, () -> {
-                                    mods.setEnabled(item, !item.enabled());
-                                    setup();
-                                }).size(50f).disabled(!item.isSupported());
-
-                                right.button(item.hasSteamID() ? Icon.link : Icon.trash, Styles.clearNonei, () -> {
-                                    if(!item.hasSteamID()){
-                                        ui.showConfirm("@confirm", "@mod.remove.confirm", () -> {
-                                            mods.removeMod(item);
-                                            setup();
-                                        });
-                                    }else{
-                                        platform.viewListing(item);
-                                    }
-                                }).size(50f);
-
-                                if(steam && !item.hasSteamID()){
-                                    right.row();
-                                    right.button(Icon.export, Styles.clearNonei, () -> {
-                                        platform.publish(item);
-                                    }).size(50f);
-                                }
-                            }).growX().right().padRight(-8f).padTop(-8f);
-                        }, Styles.flatBordert, () -> showMod(item)).size(w, h).growX().pad(4f);
-                        pane[0].row();
-                    }
-                }
-
-                if(!any){
-                    pane[0].add("@none.found").color(Color.lightGray).pad(4);
-                }
-            };
-
             if(!mobile || Core.graphics.isPortrait()){
                 cont.table(search -> {
                     search.image(Icon.zoom).padRight(8f);
-                    search.field("", rebuild).growX();
+                    search.field("", text -> {
+                        modQuery = text;
+                        rebuildModPane();
+                    }).growX();
                 }).fillX().padBottom(4);
             }
 
             cont.row();
-            cont.pane(table1 -> {
-                pane[0] = table1.margin(10f).top();
-                rebuild.get("");
-            }).scrollX(false).update(s -> scroll = s.getScrollY()).get().setScrollYForce(scroll);
+            cont.pane(Styles.noBarPane, modPane).scrollX(false).update(s -> scroll = s.getScrollY()).get().setScrollYForce(scroll);
+
+            modQuery = "";
+            rebuildModPane();
         }else{
             cont.table(Styles.black6, t -> t.add("@mods.none")).height(80f);
         }
 
         cont.row();
+    }
+
+    private void rebuildModPane(){
+        modPane.clearChildren();
+
+        addModGroup(modPane, "internal", internalMods);
+        addModGroup(modPane, "mod", otherMods);
+    }
+
+    private void addModGroup(Table table, String groupName, Seq<LoadedMod> mods){
+        table.table(Tex.whiteui, modGroup -> {
+            modGroup.add(Core.bundle.get("mods.group." + groupName) + "(" + mods.size + ")").color(Pal.accent).pad(4f).padLeft(12f).expandX().left();
+
+            modGroup.row();
+
+            modGroup.table(modCont -> {
+                boolean any = false;
+                boolean anyDisabled = false;
+
+                for(LoadedMod mod : mods){
+                    if(!Strings.matches(modQuery, mod.meta.displayName)){
+                        continue;
+                    }
+
+                    any = true;
+                    if(!mod.enabled() && !anyDisabled && mods.any()){
+                        anyDisabled = true;
+                        modCont.row();
+
+                        modCont.table(disableLine -> {
+                            disableLine.add("@mods.disabled").color(Color.red).pad(4f);
+                            disableLine.image().height(4f).pad(4f).color(Pal.darkestGray).growX();
+                        }).growX().pad(6f);
+
+                        modCont.row();
+                    }
+
+                    addModCard(modCont, mod);
+
+                    Card.cardShadow(modCont);
+
+                    modCont.row();
+                }
+
+                if(!any){
+                    modCont.add("@none.found").color(Color.lightGray).pad(4);
+                }
+            }).pad(8f).fillX();
+        }).color(Pal.gray).padTop(16f).growX();
+
+        table.row();
+    }
+
+    private void addModCard(Table table, LoadedMod mod){
+        table.button(t -> {
+            t.top().left();
+            t.margin(12f);
+
+            String stateDetails = getStateDetails(mod);
+            if(stateDetails != null){
+                t.addListener(new Tooltip(f -> f.background(Styles.black8).margin(4f).add(stateDetails).growX().width(400f).wrap()));
+            }
+
+            t.defaults().left().top();
+            t.table(title1 -> {
+                title1.left();
+
+                title1.add(new BorderImage(){{
+                    if(mod.iconTexture != null){
+                        setDrawable(new TextureRegion(mod.iconTexture));
+                    }else{
+                        setDrawable(Tex.nomap);
+                    }
+                    border(Pal.accent);
+                }}).size(modCardHeight - 8f).padTop(-8f).padLeft(-8f).padRight(8f);
+
+                title1.table(text -> {
+                    boolean hideDisabled = !mod.isSupported() || mod.hasUnmetDependencies() || mod.hasContentErrors();
+                    String shortDesc = mod.meta.shortDescription();
+
+                    text.add("[accent]" + Strings.stripColors(mod.meta.displayName) + "\n" +
+                    (shortDesc.length() > 0 ? "[lightgray]" + shortDesc + "\n" : "")
+                    //so does anybody care about version?
+                    //+ "[gray]v" + Strings.stripColors(trimText(item.meta.version)) + "\n"
+                    + (mod.enabled() || hideDisabled ? "" : Core.bundle.get("mod.disabled") + ""))
+                    .wrap().top().width(300f).growX().left();
+
+                    text.row();
+
+                    String state = getStateText(mod);
+                    if(state != null){
+                        text.labelWrap(state).growX().row();
+                    }
+                }).top().growX();
+
+                title1.add().growX();
+            }).grow().left();
+
+            t.table(right -> {
+                right.right();
+                right.button(mod.enabled() ? Icon.downOpen : Icon.upOpen, Styles.clearNonei, () -> {
+                    mods.setEnabled(mod, !mod.enabled());
+                    setup();
+                }).size(50f).disabled(!mod.isSupported());
+
+                right.button(mod.hasSteamID() ? Icon.link : Icon.trash, Styles.clearNonei, () -> {
+                    if(!mod.hasSteamID()){
+                        ui.showConfirm("@confirm", "@mod.remove.confirm", () -> {
+                            mods.removeMod(mod);
+                            setup();
+                        });
+                    }else{
+                        platform.viewListing(mod);
+                    }
+                }).size(50f).disabled(mod.root.type() == FileType.internal);
+
+                if(steam && !mod.hasSteamID()){
+                    right.row();
+                    right.button(Icon.export, Styles.clearNonei, () -> {
+                        platform.publish(mod);
+                    }).size(50f);
+                }
+            }).growX().right().padRight(-8f).padTop(-8f);
+        }, Styles.flatBordert, () -> showMod(mod)).maxWidth(modCardWidth).height(modCardHeight).growX().pad(4f);
     }
 
     private @Nullable String getStateText(LoadedMod item){
