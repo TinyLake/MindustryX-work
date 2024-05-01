@@ -1,5 +1,6 @@
 package mindustryX.features;
 
+import arc.*;
 import arc.math.geom.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
@@ -14,9 +15,17 @@ import static mindustry.Vars.*;
 public class UIExt{
     public static TeamSelectDialog teamSelect;
     public static ModsRecommendDialog modsRecommend = new ModsRecommendDialog();
+    public static TeamsStatDisplay teamsStatDisplay;
 
     public static void init(){
         teamSelect = new TeamSelectDialog();
+
+        teamsStatDisplay = new TeamsStatDisplay();
+        ui.hudGroup.fill(t -> {
+            t.name = "otherCore";
+            t.left().add(teamsStatDisplay);
+            t.visible(() -> ui.hudfrag.shown && Core.settings.getBool("showOtherTeamResource"));
+        });
     }
 
     public static void buildPositionRow(Table tt, Vec2 vec){
