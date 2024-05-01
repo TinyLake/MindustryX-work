@@ -16,6 +16,8 @@ public class UIExt{
     public static TeamSelectDialog teamSelect;
     public static ModsRecommendDialog modsRecommend = new ModsRecommendDialog();
     public static TeamsStatDisplay teamsStatDisplay;
+    public static HudSettingsTable hudSettingsTable = new HudSettingsTable();
+    public static AdvanceBuildTool advanceBuildTool = new AdvanceBuildTool();
 
     public static void init(){
         teamSelect = new TeamSelectDialog();
@@ -25,6 +27,13 @@ public class UIExt{
             t.name = "otherCore";
             t.left().add(teamsStatDisplay);
             t.visible(() -> ui.hudfrag.shown && Core.settings.getBool("showOtherTeamResource"));
+        });
+
+        ui.hudGroup.fill(t -> {
+            t.name = "quickTool";
+            t.right().add(hudSettingsTable).growX();
+            t.row().add(advanceBuildTool).growX();
+            t.visible(() -> ui.hudfrag.shown && Core.settings.getBool("showQuickToolTable"));
         });
     }
 
