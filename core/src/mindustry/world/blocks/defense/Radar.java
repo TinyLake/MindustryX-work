@@ -3,12 +3,14 @@ package mindustry.world.blocks.defense;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
+import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.io.*;
 import mindustry.*;
 import mindustry.annotations.Annotations.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import mindustry.input.*;
 import mindustry.world.*;
 import mindustry.world.meta.*;
 
@@ -43,6 +45,12 @@ public class Radar extends Block{
         super.drawPlace(x, y, rotation, valid);
 
         Drawf.dashCircle(x * tilesize + offset, y * tilesize + offset, fogRadius * tilesize, Pal.accent);
+    }
+
+    @Override
+    public void changePlacementPath(Seq<Point2> points, int rotation){
+        var placeRadius2 = Mathf.pow(fogRadius, 2f) * 3;//*2/sqrt(3)/2
+        Placement.calculateNodes(points, this, rotation, (point, other) -> point.dst2(other) <= placeRadius2);
     }
 
     public class RadarBuild extends Building{
