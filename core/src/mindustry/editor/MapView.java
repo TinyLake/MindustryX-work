@@ -254,6 +254,11 @@ public class MapView extends Element implements GestureListener{
         if(grid){
             Draw.color(Color.gray);
             image.setBounds(centerx - sclwidth / 2, centery - sclheight / 2, sclwidth, sclheight);
+            image.interval = 1;
+            image.draw();
+
+            Draw.color(Color.cyan, 0.5f);
+            image.interval = editor.interval;
             image.draw();
 
             Lines.stroke(2f);
@@ -268,15 +273,26 @@ public class MapView extends Element implements GestureListener{
             Lines.line(centerx - sclwidth/2f, centery, centerx + sclwidth/2f, centery);
             Lines.line(centerx, centery - sclheight/2f, centerx, centery + sclheight/2f);
 
+            float diagonal = Math.max(sclwidth / 2f, sclheight / 2f);
+            Draw.color(Color.orange, 0.5f);
+            Lines.line(centerx - diagonal, centery - diagonal, centerx + diagonal, centery + diagonal);
+            Lines.line(centerx - diagonal, centery + diagonal, centerx + diagonal, centery - diagonal);
+
             Draw.reset();
         }
 
-        int index = 0;
+        Vec2[] brush = null;
         for(int i = 0; i < MapEditor.brushSizes.length; i++){
             if(editor.brushSize == MapEditor.brushSizes[i]){
-                index = i;
+                brush = brushPolygons[i];
                 break;
             }
+        }
+        //MDTX: 学术端的任意大小笔刷功能
+        if(brush == null){
+            float bSize = editor.brushSize;
+            float mod = bSize % 1f;
+            brush = Geometry.pixelCircle(bSize, (index, x, y) -> Mathf.dst(x, y, index - mod, index - mod) <= bSize - 0.5f);
         }
 
         float scaling = zoom * Math.min(width, height) / editor.width();
@@ -290,8 +306,8 @@ public class MapView extends Element implements GestureListener{
                 float sx = v1.x, sy = v1.y;
                 Vec2 v2 = unproject(lastx, lasty).add(x, y);
 
-                Lines.poly(brushPolygons[index], sx, sy, scaling);
-                Lines.poly(brushPolygons[index], v2.x, v2.y, scaling);
+                Lines.poly(brush, sx, sy, scaling);
+                Lines.poly(brush, v2.x, v2.y, scaling);
             }
 
             if((tool.edit || (tool == EditorTool.line && !drawing)) && (!mobile || drawing)){
@@ -299,10 +315,12 @@ public class MapView extends Element implements GestureListener{
                 Vec2 v = unproject(p.x, p.y).add(x, y);
 
                 //pencil square outline
-                if(tool == EditorTool.pencil && tool.mode == 1){
-                    Lines.square(v.x + scaling/2f, v.y + scaling/2f, scaling * ((editor.brushSize == 1.5f ? 1f : editor.brushSize) + 0.5f));
+                if(tool == EditorTool.pencil && (tool.mode == 1 || tool.mode == 4)){
+                    int brushSize = (int)(editor.brushSize * (tool.mode == 1 ? 2 : 1));
+                    float corr = ((brushSize % 2) == 0) ? 0f : scaling / 2f;//whether in the center of tile
+                    Lines.square(v.x + corr, v.y + corr, scaling * brushSize / 2);
                 }else{
-                    Lines.poly(brushPolygons[index], v.x, v.y, scaling);
+                    Lines.poly(brush, v.x, v.y, scaling);
                 }
             }
         }else{

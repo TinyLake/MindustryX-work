@@ -47,7 +47,7 @@ public enum EditorTool{
         }
     },
     //the "under liquid" rendering is too buggy to make public
-    pencil(KeyCode.b, "replace", "square", "drawteams"/*, "underliquid"*/){
+    pencil(KeyCode.b, "replace", "square", "drawteams", "underliquid", "square2"){
         {
             edit = true;
             draggable = true;
@@ -69,6 +69,9 @@ public enum EditorTool{
                 editor.drawCircle(x, y, tile -> tile.setTeam(editor.drawTeam));
             }else if(mode == 3){
                 editor.drawBlocks(x, y, false, true, tile -> tile.floor().isLiquid);
+            }else if(mode == 4){
+                editor.diamMode = true;
+                editor.drawBlocks(x, y, true, false, tile -> true);
             }
 
         }

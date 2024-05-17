@@ -5,6 +5,7 @@ import arc.scene.*;
 
 public class GridImage extends Element{
     private int imageWidth, imageHeight;
+    public int interval = 1;
 
     public GridImage(int w, int h){
         this.imageWidth = w;
@@ -19,8 +20,8 @@ public class GridImage extends Element{
 
         int minspace = 10;
 
-        int jumpx = (int)(Math.max(minspace, xspace) / xspace);
-        int jumpy = (int)(Math.max(minspace, yspace) / yspace);
+        int jumpx = (int)(Math.max(minspace, xspace * interval) / xspace);
+        int jumpy = (int)(Math.max(minspace, yspace * interval) / yspace);
 
         for(int x = 0; x <= imageWidth; x += jumpx){
             Fill.crect((int)(this.x + xspace * x - s), y - s, 2, getHeight() + (x == imageWidth ? 1 : 0));

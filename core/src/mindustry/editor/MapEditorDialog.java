@@ -30,6 +30,7 @@ import mindustry.world.*;
 import mindustry.world.blocks.environment.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -595,11 +596,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
                 .colspan(3).height(40).width(size * 3f + 3f).padBottom(3);
 
                 tools.row();
-
-                ButtonGroup<ImageButton> teamgroup = new ButtonGroup<>();
-
                 int i = 0;
-
                 for(Team team : Team.baseTeams){
                     ImageButton button = new ImageButton(Tex.whiteui, Styles.clearNoneTogglei);
                     button.margin(4f);
@@ -607,19 +604,34 @@ public class MapEditorDialog extends Dialog implements Disposable{
                     button.getStyle().imageUpColor = team.color;
                     button.clicked(() -> editor.drawTeam = team);
                     button.update(() -> button.setChecked(editor.drawTeam == team));
-                    teamgroup.add(button);
                     tools.add(button);
 
                     if(i++ % 3 == 2) tools.row();
                 }
+                tools.button("[violet]其他队伍", Styles.flatToggleMenut, () -> UIExt.teamSelect.pickOne(team -> editor.drawTeam = team))
+                .update(b->{
+                    boolean checked = !Seq.with(Team.baseTeams).contains(editor.drawTeam);
+                    b.setColor(checked ? editor.drawTeam.color : Color.violet);
+                    b.setChecked(checked);
+                }).colspan(3).size(size * 3f, size / 2);
 
                 mid.add(tools).top().padBottom(-6);
 
                 mid.row();
 
+                mid.table(t -> {
+                    t.add("辅助线：");
+                    t.field(Integer.toString(editor.interval), TextField.TextFieldFilter.digitsOnly, value -> editor.interval = Integer.parseInt(value))
+                    .valid(Strings::canParsePositiveInt).maxTextLength(4).width(100f);
+                }).row();
+
+                var brushField = mid.table().get()
+                .add("笔刷：").getTable()
+                .field(Float.toString(editor.brushSize), value -> editor.brushSize = Float.parseFloat(value)).valid(Strings::canParsePositiveFloat).maxTextLength(4).width(100f).get();
+                mid.row();
                 mid.table(Tex.underline, t -> {
                     Slider slider = new Slider(0, MapEditor.brushSizes.length - 1, 1, false);
-                    slider.moved(f -> editor.brushSize = MapEditor.brushSizes[(int)f]);
+                    slider.moved(f -> {editor.brushSize = MapEditor.brushSizes[(int)f];brushField.setText(Float.toString(editor.brushSize));});
                     for(int j = 0; j < MapEditor.brushSizes.length; j++){
                         if(MapEditor.brushSizes[j] == editor.brushSize){
                             slider.setValue(j);
@@ -793,7 +805,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
 
             if(i == 0) editor.drawBlock = block;
 
-            if(++i % 4 == 0){
+            if(++i % Math.max(Core.settings.getInt("editorBrush"),3) == 0){
                 blockSelection.row();
             }
         }
