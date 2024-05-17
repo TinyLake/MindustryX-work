@@ -29,7 +29,9 @@ public class MapEditor{
     private boolean loading;
 
     public float brushSize = 1;
+    public int interval = 25;
     public int rotation;
+    public boolean diamMode; // only use in drawSquare now, set each time before draw
     public Block drawBlock = Blocks.stone;
     public Team drawTeam = Team.sharded;
 
@@ -270,9 +272,10 @@ public class MapEditor{
     }
 
     public void drawSquare(int x, int y, Cons<Tile> drawer){
-        int clamped = (int)brushSize;
-        for(int rx = -clamped; rx <= clamped; rx++){
-            for(int ry = -clamped; ry <= clamped; ry++){
+        int clamped = (int)(brushSize * (diamMode ? 1 : 2)) - 1;
+        diamMode = false;
+        for(int rx = -clamped / 2; rx <= clamped - clamped / 2; rx++){
+            for(int ry = -clamped / 2; ry <= clamped - clamped / 2; ry++){
                 int wx = x + rx, wy = y + ry;
 
                 if(wx < 0 || wy < 0 || wx >= width() || wy >= height()){
