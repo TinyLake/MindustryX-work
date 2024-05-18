@@ -170,15 +170,14 @@ public class BeamDrill extends Block{
             );
         }
 
-        if(item != null){
-            float width = drawPlaceText(Core.bundle.formatFloat("bar.drillspeed", 60f / getDrillTime(item) * count, 2), x, y, valid);
-            if(!multiple){
-                float dx = x * tilesize + offset - width/2f - 4f, dy = y * tilesize + offset + size * tilesize / 2f + 5, s = iconSmall / 4f;
-                Draw.mixcol(Color.darkGray, 1f);
-                Draw.rect(item.fullIcon, dx, dy - 1, s, s);
-                Draw.reset();
-                Draw.rect(item.fullIcon, dx, dy, s, s);
-            }
+        //MDTX: 显性多矿物报错; 增加冷却液显示
+        if(multiple){
+            //FIXME v146 bug
+            drawPlaceText("[yellow]v146中不能同时挖掘多种矿物(BE已修复)", x, y, false);
+        }else if(item != null){
+            float speed = 60f / getDrillTime(item) * count;
+            String msg = Strings.format("@ [white]@@[] @[white]([cyan]@[])", Iconc.production, item.emoji(), item.localizedName, Strings.autoFixed(speed, 2), Strings.autoFixed(speed * optionalBoostIntensity, 2));
+            drawPlaceText(msg, x, y, valid);
         }else if(invalidItem != null){
             drawPlaceText(Core.bundle.get("bar.drilltierreq"), x, y, false);
         }
