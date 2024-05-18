@@ -63,6 +63,7 @@ public class Settings{
             c.addCategory("entitySettings");
             c.checkPref("bulletShow", true);
             c.checkPref("showMineBeam".toLowerCase(), true);
+            c.checkPref("noPlayerHitBox", false);
 
             c.addCategory("developerMode");
             c.checkPref("renderSort", false);
