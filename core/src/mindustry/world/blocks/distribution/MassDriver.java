@@ -335,6 +335,9 @@ public class MassDriver extends Block{
             return other instanceof MassDriverBuild entity && other.isValid() && other.efficiency > 0 && entity.block == block && entity.link == pos() && within(other, range);
         }
 
+        public boolean arcLinkValid(){
+            return linkValid();
+        }
         protected boolean linkValid(){
             if(link == -1) return false;
             return world.build(this.link) instanceof MassDriverBuild other && other.block == block && other.team == team && within(other, range);

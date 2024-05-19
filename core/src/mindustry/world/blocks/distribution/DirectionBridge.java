@@ -215,5 +215,12 @@ public class DirectionBridge extends Block{
             }
             return null;
         }
+        public boolean arcCheckAccept(Building source) {
+            //only accept if there's an output point.
+            if(findLink() == null) return false;
+
+            int rel = this.relativeToEdge(source.tile);
+            return rel != rotation && occupied[(rel + 2) % 4] == null;
+        }
     }
 }

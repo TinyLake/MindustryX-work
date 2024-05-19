@@ -532,5 +532,17 @@ public class ItemBridge extends Block{
                 wasMoved = moved = read.bool();
             }
         }
+
+        public boolean arcLinkValid() {
+            return linkValid(this.tile, world.tile(link));
+        }
+
+        public boolean arcCheckDump(Building to){
+            return checkDump(to);
+        }
+
+        public boolean arcCheckAccept(Building source) {
+            return checkAccept(source, world.tile(link));
+        }
     }
 }
