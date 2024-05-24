@@ -6,6 +6,7 @@ import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
 import mindustry.gen.*;
+import mindustryX.features.*;
 
 import java.util.*;
 
@@ -80,6 +81,17 @@ public class EntityGroup<T extends Entityc> implements Iterable<T>{
     }
 
     public void update(){
+        if(LogicExt.limitUpdate){
+            Core.camera.bounds(viewport);
+            viewport.grow(LogicExt.limitDst * 2);
+            for(index = 0; index < array.size; index++){
+                Entityc e = array.items[index];
+                if(e instanceof Position p && !viewport.contains(p.getX(), p.getY()))
+                    continue;
+                array.items[index].update();
+            }
+            return;
+        }
         for(index = 0; index < array.size; index++){
             array.items[index].update();
         }
