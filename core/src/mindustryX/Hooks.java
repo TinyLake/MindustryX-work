@@ -27,6 +27,7 @@ public class Hooks implements ApplicationListener{
     @Override
     public void init(){
         Log.infoTag("MindustryX", "Hooks.init");
+        LogicExt.init();
         if(AutoUpdate.INSTANCE.getActive())
             AutoUpdate.INSTANCE.checkUpdate();
         if(!Vars.headless){
