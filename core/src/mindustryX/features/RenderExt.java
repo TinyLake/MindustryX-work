@@ -29,6 +29,7 @@ public class RenderExt{
     public static int blockBarMinHealth;
     public static float overdriveZoneTransparency;
     public static boolean logicDisplayNoBorder, arcDrillMode;
+    public static int blockRenderLevel;
 
     public static boolean unitHide = false;
 
@@ -58,6 +59,7 @@ public class RenderExt{
             overdriveZoneTransparency = Core.settings.getInt("overdrive_zone") / 100f;
             logicDisplayNoBorder = Core.settings.getBool("arclogicbordershow");
             arcDrillMode = Core.settings.getBool("arcdrillmode");
+            blockRenderLevel = Core.settings.getInt("blockRenderLevel");
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);
@@ -73,6 +75,7 @@ public class RenderExt{
     }
 
     public static void onBlockDraw(Tile tile, Block block, @Nullable Building build){
+        if(blockRenderLevel < 2) return;
         block.drawBase(tile);
         if(displayAllMessage && build instanceof MessageBuild)
             Draw.draw(Layer.overlayUI - 0.1f, build::drawSelect);
