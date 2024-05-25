@@ -16,6 +16,7 @@ import mindustry.world.*;
 import mindustry.world.blocks.liquid.Conduit.*;
 import mindustry.world.draw.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -232,7 +233,7 @@ public class GenericCrafter extends Block{
                     }
                 }
 
-                if(wasVisible && Mathf.chanceDelta(updateEffectChance)){
+                if(RenderExt.blockRenderLevel > 1 && wasVisible && Mathf.chanceDelta(updateEffectChance)){
                     updateEffect.at(x + Mathf.range(size * 4f), y + Mathf.range(size * 4));
                 }
             }else{
@@ -298,6 +299,8 @@ public class GenericCrafter extends Block{
             if(wasVisible){
                 craftEffect.at(x, y);
             }
+
+            if (RenderExt.blockRenderLevel > 1) craftEffect.at(x, y);
             progress %= 1f;
         }
 

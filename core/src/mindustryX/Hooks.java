@@ -12,6 +12,8 @@ import mindustryX.features.Settings;
 import java.net.*;
 import java.util.*;
 
+import static arc.Core.*;
+
 public class Hooks implements ApplicationListener{
     /** invoke before `Vars.init`. Note that may be executed from `Vars.loadAsync` */
     public static void beforeInit(){
@@ -74,6 +76,9 @@ public class Hooks implements ApplicationListener{
         }
         if(Core.input.keyTap(Binding.point)){
             MarkerType.selected.markWithMessage(Core.input.mouseWorld());
+        }
+        if(input.keyTap(Binding.toggle_block_render)){
+            settings.put("blockRenderLevel", (RenderExt.blockRenderLevel + 1) % 3);
         }
     }
 

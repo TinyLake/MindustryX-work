@@ -103,6 +103,7 @@ public enum Binding implements KeyBind{
     toggle_unit(KeyCode.unknown, "mindustryX"),
     point(KeyCode.j),
     lockonLastMark(KeyCode.unknown),
+    toggle_block_render(KeyCode.unknown),
     ;
 
     private final KeybindValue defaultValue;
