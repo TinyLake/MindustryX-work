@@ -36,6 +36,8 @@ public class DesktopLauncher extends ClientLauncher{
     public static void main(String[] arg){
         try{
             Vars.loadLogger();
+            arc.util.ArcNativesLoader.load();
+            arc.backend.sdl.jni.SDL.SDL_SetHint("SDL_WINDOWS_DPI_SCALING", "1");
             new SdlApplication(new DesktopLauncher(arg), new SdlConfig(){{
                 title = "Mindustry";
                 maximized = true;
