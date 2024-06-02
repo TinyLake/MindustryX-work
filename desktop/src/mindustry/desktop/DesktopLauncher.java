@@ -70,6 +70,7 @@ public class DesktopLauncher extends ClientLauncher{
     }
 
     public DesktopLauncher(String[] args){
+        arc.backend.sdl.jni.SDL.SDL_SetHint("SDL_WINDOWS_DPI_SCALING", "1");
         Version.init();
         boolean useSteam = Version.modifier.contains("steam");
         testMobile = Seq.with(args).contains("-testMobile");
