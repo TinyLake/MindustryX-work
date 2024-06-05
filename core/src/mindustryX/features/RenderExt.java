@@ -6,6 +6,8 @@ import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
 import arc.util.*;
+import mindustry.*;
+import mindustry.arcModule.draw.*;
 import mindustry.entities.*;
 import mindustry.game.EventType.*;
 import mindustry.gen.*;
@@ -19,6 +21,7 @@ import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
 import mindustry.world.blocks.production.Drill.*;
 import mindustry.world.blocks.storage.*;
+import mindustry.world.blocks.units.*;
 
 import static mindustry.Vars.tilesize;
 
@@ -35,6 +38,8 @@ public class RenderExt{
     public static boolean renderSort;
     public static boolean massDriverLine;
     public static int massDriverLineInterval;
+    public static boolean drawBars, drawBarsMend;
+    public static float healthBarMinHealth;
 
     public static boolean unitHide = false;
     public static Color massDriverLineColor = Color.clear;
@@ -69,6 +74,9 @@ public class RenderExt{
             renderSort = Core.settings.getBool("renderSort");
             massDriverLine = Core.settings.getBool("mass_driver_line");
             massDriverLineInterval = Core.settings.getInt("mass_driver_line_interval");
+            drawBars = Core.settings.getBool("blockBars");
+            drawBarsMend = Core.settings.getBool("blockBars_mend");
+            healthBarMinHealth = Core.settings.getInt("blockbarminhealth");
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);
@@ -92,6 +100,8 @@ public class RenderExt{
             arcDrillModeDraw(block, drill);
         if(massDriverLine && build instanceof MassDriverBuild b)
             drawMassDriverLine(b);
+        if(build != null && drawBars)
+            drawBars(build);
     }
 
     private static void placementEffect(float x, float y, float lifetime, float range, Color color){
@@ -151,5 +161,51 @@ public class RenderExt{
                 Drawf.arrow(shooter.x + dx * i, shooter.y + dy * i, x, y, size * tilesize + sin, 4f + sin, RenderExt.massDriverLineColor);
             }
         }
+    }
+
+    private static void drawBars(Building build){
+        if(build.health / build.maxHealth < 0.9f && build.maxHealth > healthBarMinHealth)
+            drawBar(build, build.team.color, Pal.health, build.health / build.maxHealth);
+        if(drawBarsMend){
+            if(build instanceof MendProjector.MendBuild b){
+                var block = (MendProjector)build.block;
+                drawBar(build, Color.black, Pal.heal, b.charge / block.reload);
+            }else if(build instanceof ForceProjector.ForceBuild b && b.buildup > 0){
+                var block = (ForceProjector)build.block;
+                float ratio = 1 - b.buildup / (block.shieldHealth + block.phaseShieldBoost * b.phaseHeat);
+                drawBar(build, Color.black, b.broken ? Pal.remove : Pal.stat, ratio);
+            }
+        }
+        float buildRatio = -1, leftTime = 0;
+        if(build instanceof Reconstructor.ReconstructorBuild b){
+            buildRatio = b.fraction();
+            leftTime = ((Reconstructor)build.block).constructTime - b.progress;
+        }else if(build instanceof UnitAssembler.UnitAssemblerBuild b){
+            buildRatio = b.progress;
+            leftTime = b.plan().time * (1 - b.progress);
+        }else if(build instanceof UnitFactory.UnitFactoryBuild b){
+            buildRatio = b.fraction();
+            leftTime = b.currentPlan == -1 ? -1 : (((UnitFactory)build.block).plans.get(b.currentPlan).time - b.progress);
+        }
+        if(buildRatio >= 0){
+            drawBar(build, Color.black, Pal.accent, buildRatio);
+            String progressT = Strings.format("[stat]@% | @s", (int)(Mathf.clamp(buildRatio, 0f, 1f) * 100), leftTime < 0 ? Iconc.cancel : Strings.fixed(leftTime / (60f * Vars.state.rules.unitBuildSpeed(build.team) * build.timeScale()), 0));
+            WorldLabel.drawAt(progressT, build.x, build.y + build.block.offset * 0.8f - 5f, Draw.z(), WorldLabel.flagOutline, 0.9f);
+        }
+    }
+
+    private static void drawBar(Building build, Color bg, Color fg, Float ratio){
+        Draw.z(Layer.turret + 4f);
+        float x = build.x, size = build.block.size * tilesize * 0.5f;
+        float x1 = x - size * 0.6f, x2 = x + size * 0.6f, y = build.y + size * 0.8f;
+        Draw.color(bg, 0.3f);
+        Lines.stroke(4f);
+        Lines.line(x1, y, x2, y);
+
+        Draw.color(fg, 0.6f);
+        Lines.stroke(2f);
+        Lines.line(x1, y, Mathf.lerp(x1, x2, Mathf.clamp(ratio, 0f, 1f)), y);
+
+        Draw.reset();
     }
 }
