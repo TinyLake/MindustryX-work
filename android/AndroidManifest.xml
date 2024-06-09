@@ -10,8 +10,7 @@
     <application
             android:resizeableActivity="true"
             android:allowBackup="true"
-            android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher_round"
+            android:icon="@drawable/ic_launcher"
             android:isGame="true"
             android:theme="@style/ArcTheme"
             android:usesCleartextTraffic="true"
