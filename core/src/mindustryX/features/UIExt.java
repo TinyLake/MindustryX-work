@@ -1,13 +1,17 @@
 package mindustryX.features;
 
 import arc.*;
+import arc.math.*;
 import arc.math.geom.*;
+import arc.scene.actions.*;
+import arc.scene.event.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import mindustry.content.*;
 import mindustry.core.*;
 import mindustry.gen.*;
+import mindustry.ui.*;
 import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
@@ -69,7 +73,38 @@ public class UIExt{
         }));
     }
 
+    public static void announce(String text){
+        announce(text, 3);
+    }
+
+    public static void announce(String text, float duration){
+        //Copy from UI.announce, no set lastAnnouncement and add offset to y
+        Table t = new Table(Styles.black3);
+        t.touchable = Touchable.disabled;
+        t.margin(8f).add(text).style(Styles.outlineLabel).labelAlign(Align.center);
+        t.update(() -> t.setPosition(Core.graphics.getWidth() / 2f, Core.graphics.getHeight() / 2f + 30f, Align.center));
+        t.actions(Actions.fadeOut(Math.min(duration, 30f), Interp.pow4In), Actions.remove());
+        t.pack();
+        t.act(0.1f);
+        Core.scene.add(t);
+    }
+
     public static void sendChatMessage(String message){
+        int maxSize = 140;
+        if(message.length() > maxSize){
+            int i = 0;
+            while(i < message.length() - maxSize){
+                int add = maxSize;
+                //避免分割颜色
+                int sp = message.lastIndexOf('[', i + add);
+                int sp2 = message.lastIndexOf(']', i + add);
+                if(sp2 > sp && i + add - sp < 10) add = sp - i;
+
+                sendChatMessage(message.substring(i, i + add));
+                i += add;
+            }
+            sendChatMessage(message.substring(i));
+        }
         Call.sendChatMessage(ui.chatfrag.mode.normalizedPrefix() + message);
     }
 }
