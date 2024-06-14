@@ -22,6 +22,7 @@ import mindustry.graphics.*;
 import mindustry.type.*;
 import mindustry.world.*;
 import mindustry.world.blocks.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -775,6 +776,7 @@ public class BulletType extends Content implements Cloneable{
     }
 
     public @Nullable Bullet create(@Nullable Entityc owner, @Nullable Entityc shooter, Team team, float x, float y, float angle, float damage, float velocityScl, float lifetimeScl, Object data, @Nullable Mover mover, float aimX, float aimY){
+        if(!RenderExt.bulletShow && net.client()) return null;
         if(!Mathf.chance(createChance)) return null;
         if(ignoreSpawnAngle) angle = 0;
         if(spawnUnit != null){
