@@ -127,7 +127,17 @@ public class ArcOld{
             c.sliderPref("rtsWoundUnit", 0, 0, 100, 2, s -> s + "%");
 
             c.addCategory("arcPlayerEffect");
-            c.textPref("playerEffectColor", "ffd37f");
+            {
+                Cons<String> changed = (t) -> {
+                    try{
+                        RenderExt.playerEffectColor = Color.valueOf(t);
+                    }catch(Exception e){
+                        RenderExt.playerEffectColor = Pal.accent;
+                    }
+                };
+                c.textPref("playerEffectColor", "ffd37f", changed);
+                changed.get(settings.getString("playerEffectColor"));
+            }
             c.sliderPref("unitTargetType", 0, 0, 5, 1, s -> switch(s){
                 case 0 -> "关闭";
                 case 1 -> "虚圆";

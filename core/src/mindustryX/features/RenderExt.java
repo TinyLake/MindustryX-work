@@ -43,6 +43,7 @@ public class RenderExt{
 
     public static boolean unitHide = false;
     public static Color massDriverLineColor = Color.clear;
+    public static Color playerEffectColor = Color.clear;
 
     private static Effect placementEffect;
 
