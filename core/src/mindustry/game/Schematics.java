@@ -34,6 +34,8 @@ import mindustry.world.blocks.sandbox.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.storage.CoreBlock.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
+import mindustryX.features.ui.*;
 
 import java.io.*;
 import java.util.zip.*;
@@ -278,7 +280,7 @@ public class Schematics implements Loadable{
     /** Creates an array of build plans from a schematic's data, centered on the provided x+y coordinates. */
     public Seq<BuildPlan> toPlans(Schematic schem, int x, int y){
         return schem.tiles.map(t -> new BuildPlan(t.x + x - schem.width/2, t.y + y - schem.height/2, t.rotation, t.block, t.config).original(t.x, t.y, schem.width, schem.height))
-            .removeAll(s -> (!s.block.isVisible() && !(s.block instanceof CoreBlock)) || !s.block.unlockedNow()).sort(Structs.comparingInt(s -> -s.block.schematicPriority));
+            .removeAll(s -> !LogicExt.terrainSchematic && !AdvanceToolTable.forcePlacement && ((!s.block.isVisible() && !(s.block instanceof CoreBlock)) || !s.block.unlockedNow())).sort(Structs.comparingInt(s -> -s.block.schematicPriority));
     }
 
     /** @return all the valid loadouts for a specific core type. */
@@ -399,7 +401,7 @@ public class Schematics implements Loadable{
             }
         }
 
-        if(found){
+        if(found || LogicExt.terrainSchematic){
             x = minx;
             y = miny;
             x2 = maxx;
@@ -408,6 +410,22 @@ public class Schematics implements Loadable{
             return new Schematic(new Seq<>(), new StringMap(), 1, 1);
         }
 
+        if(LogicExt.terrainSchematic){
+            x = Math.min(x, ox + 1);
+            x2 = Math.max(x2, ox2 - 1);
+            y = Math.min(y, oy + 1);
+            y2 = Math.max(y2, oy2 - 1);
+            for(int cx = ox; cx <= ox2; cx++){
+                for(int cy = oy; cy <= oy2; cy++){
+                    Tile tile = world.tile(cx, cy);
+                    tiles.add(new Stile(tile.floor(), tile.x - x, tile.y - y));
+                    if(!tile.overlay().isAir())
+                        tiles.add(new Stile(tile.overlay(), tile.x - x, tile.y - y));
+                    if(!tile.block().isAir() && tile.build == null)
+                        tiles.add(new Stile(tile.block(), tile.x - x, tile.y - y));
+                }
+            }
+        }
         int width = x2 - x + 1, height = y2 - y + 1;
         int offsetX = -x, offsetY = -y;
         IntSet counted = new IntSet();
@@ -423,6 +441,15 @@ public class Schematics implements Loadable{
 
                     tiles.add(new Stile(realBlock, tile.tileX() + offsetX, tile.tileY() + offsetY, config, (byte)tile.rotation));
                     counted.add(tile.pos());
+                }
+            }
+        }
+        if(LogicExt.terrainSchematic){
+            for(int cx = ox; cx <= ox2; cx++){
+                for(int cy = oy; cy <= oy2; cy++){
+                    Tile tile = world.tile(cx, cy);
+                    if(!tile.block().isAir() && (tile.build == null || counted.add(tile.build.pos())))
+                        tiles.add(new Stile(tile.block(), tile.x - x, tile.y - y));
                 }
             }
         }
