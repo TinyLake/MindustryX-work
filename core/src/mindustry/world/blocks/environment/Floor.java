@@ -93,6 +93,7 @@ public class Floor extends Block{
         allowRectanglePlacement = true;
         instantBuild = true;
         placeEffect = Fx.rotateBlock;
+        schematicPriority = 100;
     }
 
     @Override
