@@ -17,6 +17,7 @@ import mindustry.gen.Unit
 import mindustry.ui.Styles
 import mindustry.world.blocks.payloads.Payload
 import mindustryX.features.LogicExt
+import mindustryX.features.Settings
 import mindustryX.features.TimeControl
 import mindustryX.features.UIExt
 
@@ -90,7 +91,7 @@ class AdvanceToolTable : ToolTableBase() {
                     Reflect.invoke<Any>(Vars.ui.hudfrag.blockfrag, "rebuild")
                 }.checked { allBlocksReveal }
                     .tooltip("[acid]显示并允许建造所有物品").size(50f, 30f)
-                button("地形蓝图", Styles.flatToggleMenut) { Core.settings.put("terrainSchematic", !LogicExt.terrainSchematic) }
+                button("地形蓝图", Styles.flatToggleMenut) { Settings.toggle("terrainSchematic") }
                     .checked { LogicExt.terrainSchematic }.size(72f, 30f)
             }
 

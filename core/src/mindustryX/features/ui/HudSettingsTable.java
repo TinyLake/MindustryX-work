@@ -10,6 +10,7 @@ import mindustry.game.*;
 import mindustry.gen.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
+import mindustryX.features.Settings;
 import mindustryX.features.*;
 
 import static arc.Core.*;
@@ -35,7 +36,7 @@ public class HudSettingsTable extends ToolTableBase{
             t.button("[cyan]观", Styles.flatBordert, () -> Call.sendChatMessage("/ob")).size(30).tooltip("观察者模式");
             t.button("[cyan]技", Styles.flatBordert, () -> Call.sendChatMessage("/skill")).size(30).tooltip("技能！");
             t.button("[cyan]版", Styles.flatBordert, () -> Call.sendChatMessage("/broad")).size(30).tooltip("服务器信息版");
-            t.button("[red]版", Styles.flatTogglet, () -> settings.put("ShowInfoPopup", !Core.settings.getBool("ShowInfoPopup"))).checked(a -> Core.settings.getBool("ShowInfoPopup")).size(30, 30).tooltip("关闭所有信息版");
+            t.button("[red]版", Styles.flatTogglet, () -> Settings.toggle("ShowInfoPopup")).checked(a -> Core.settings.getBool("ShowInfoPopup")).size(30, 30).tooltip("关闭所有信息版");
             t.button("[white]法", Styles.flatBordert, () -> ui.showConfirm("受不了，直接投降？", () -> Call.sendChatMessage("/vote gameover"))).size(30, 30).tooltip("法国军礼");
             if(settings.getInt("arcQuickMsg", 0) == 0)
                 t.button("\uE87C", Styles.flatBordert, this::arcQuickMsgTable).size(30, 30).tooltip("快捷消息");
@@ -56,18 +57,18 @@ public class HudSettingsTable extends ToolTableBase{
             }).left().row();
         }
         cont.table(t -> {
-            t.button("[cyan]块", Styles.flatTogglet, () -> Core.settings.put("blockRenderLevel", (RenderExt.blockRenderLevel + 1) % 3))
+            t.button("[cyan]块", Styles.flatTogglet, () -> Settings.cycle("blockRenderLevel", 3))
             .checked((a) -> RenderExt.blockRenderLevel > 0).size(30, 30).tooltip("建筑显示");
             t.button("[cyan]兵", Styles.flatTogglet, () -> RenderExt.unitHide = !RenderExt.unitHide)
             .checked(a -> !RenderExt.unitHide).size(30, 30).tooltip("兵种显示");
-            t.button("[cyan]箱", Styles.flatTogglet, () -> Core.settings.put("unithitbox", !Core.settings.getBool("unithitbox")))
+            t.button("[cyan]箱", Styles.flatTogglet, () -> Settings.toggle("unithitbox"))
             .checked(a -> Core.settings.getBool("unithitbox")).size(30, 30).tooltip("碰撞箱显示");
-            t.button("[cyan]弹", Styles.flatTogglet, () -> Core.settings.put("bulletShow", !Core.settings.getBool("bulletShow")))
+            t.button("[cyan]弹", Styles.flatTogglet, () -> Settings.toggle("bulletShow"))
             .checked(a -> Core.settings.getBool("bulletShow")).size(30, 30).tooltip("子弹显示");
-            t.button("[cyan]" + Iconc.map, Styles.flatTogglet, () -> Core.settings.put("minimap", !Core.settings.getBool("minimap")))
+            t.button("[cyan]" + Iconc.map, Styles.flatTogglet, () -> Settings.toggle("minimap"))
             .checked(a -> Core.settings.getBool("minimap")).size(30, 30).tooltip("小地图显示");
             t.button("[violet]锁", Styles.flatTogglet, () -> {
-                Core.settings.put("removeLogicLock", !Core.settings.getBool("removeLogicLock"));
+                Settings.toggle("removeLogicLock");
                 control.input.logicCutscene = false;
                 ui.announce("已移除逻辑视角锁定");
             }).checked(a -> Core.settings.getBool("removeLogicLock")).size(30, 30).tooltip("逻辑锁定");
@@ -76,17 +77,17 @@ public class HudSettingsTable extends ToolTableBase{
             }).checked(a -> renderer.fogEnabled).size(30, 30).tooltip("战争迷雾").visible(() -> !state.rules.pvp || player.team().id == 255);
         }).left().row();
         cont.table(t -> {
-            t.button("[red]灯", Styles.flatTogglet, () -> settings.put("drawlight", !settings.getBool("drawlight")))
+            t.button("[red]灯", Styles.flatTogglet, () -> Settings.toggle("drawlight"))
             .checked(a -> state.rules.lighting).size(30, 30).name("灯光").tooltip("[cyan]开灯啊！");
-            t.button("[acid]效", Styles.flatTogglet, () -> Core.settings.put("effects", !Core.settings.getBool("effects")))
+            t.button("[acid]效", Styles.flatTogglet, () -> Settings.toggle("effects"))
             .checked(a -> Core.settings.getBool("effects")).size(30, 30).tooltip("特效显示");
             t.button("[acid]光", Styles.flatTogglet, () -> {
-                Core.settings.put("bloom", !Core.settings.getBool("bloom"));
+                Settings.toggle("bloom");
                 renderer.toggleBloom(settings.getBool("bloom"));
             }).checked(a -> Core.settings.getBool("bloom")).size(30, 30).tooltip("光效显示");
             t.button("[acid]墙", Styles.flatTogglet, () -> enableDarkness ^= true)
             .checked(a -> enableDarkness).size(30, 30).tooltip("墙体阴影显示");
-            t.button("[acid]天", Styles.flatTogglet, () -> Core.settings.put("showweather", !Core.settings.getBool("showweather")))
+            t.button("[acid]天", Styles.flatTogglet, () -> Settings.toggle("showweather"))
             .checked(a -> Core.settings.getBool("showweather")).size(30, 30).tooltip("天气显示");
             t.button("[cyan]扫", Styles.flatTogglet, () -> ArcScanMode.enabled = !ArcScanMode.enabled)
             .checked(a -> ArcScanMode.enabled).size(30, 30).tooltip("扫描模式");
@@ -194,7 +195,7 @@ public class HudSettingsTable extends ToolTableBase{
     public void sliderPref(String name, int min, int max, int step, StringProcessor s){
         Slider slider = new Slider(min, max, step, false);
         Label value = new Label("", Styles.outlineLabel);
-        slider.update(()->{
+        slider.update(() -> {
             slider.setValue(settings.getInt(name));
             value.setText(s.get((int)slider.getValue()));
         });
@@ -209,7 +210,7 @@ public class HudSettingsTable extends ToolTableBase{
         cont.stack(slider, content).width(Math.min(Core.graphics.getWidth() / 1.2f, 300f)).left().padTop(4f).get();
         cont.row();
 
-        if(settings.getDefault(name)==null)
+        if(settings.getDefault(name) == null)
             Log.warn("no default value for " + name);
     }
 
@@ -222,7 +223,7 @@ public class HudSettingsTable extends ToolTableBase{
         cont.add(box).left().padTop(0.5f);
         cont.row();
 
-        if(settings.getDefault(name)==null)
+        if(settings.getDefault(name) == null)
             Log.warn("no default value for " + name);
     }
 }

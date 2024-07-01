@@ -74,4 +74,12 @@ public class Settings{
             Vars.ui.settings.getCategories().addAll(categories);
         });
     }
+
+    public static void toggle(String name){
+        Core.settings.put(name, !Core.settings.getBool(name));
+    }
+
+    public static void cycle(String name, int max){
+        Core.settings.put(name, (Core.settings.getInt(name) + 1) % max);
+    }
 }

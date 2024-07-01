@@ -9,6 +9,7 @@ import mindustry.core.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.ui.*;
+import mindustryX.features.Settings;
 
 //move from mindustry.arcModule.ui.PowerInfo
 public class ArcPowerInfo{
@@ -57,9 +58,7 @@ public class ArcPowerInfo{
         () -> Pal.powerBar,
         () -> stored / capacity);
 
-        power.clicked(() -> {
-            Core.settings.put("arccoreitems", (Core.settings.getInt("arccoreitems") + 1) % 4);
-        });
+        power.clicked(() -> Settings.cycle("arccoreitems",4));
         power.margin(0);
         power.add(powerBar).height(18).growX().padBottom(1);
         power.row();

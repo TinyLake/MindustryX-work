@@ -23,6 +23,8 @@ import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.power.*;
 import mindustry.world.blocks.production.*;
 import mindustry.world.blocks.storage.*;
+import mindustryX.features.*;
+import mindustryX.features.Settings;
 import mindustryX.features.func.*;
 
 import static mindustry.Vars.*;
@@ -142,7 +144,7 @@ public class AdvanceBuildTool extends ToolTableBase{
                 });
             }).fillX().row();
             t.table(tt -> {
-                tt.button(Blocks.worldMessage.emoji(), flatTogglet, () -> Core.settings.put("displayallmessage", !Core.settings.getBool("displayallmessage", false))).checked(a -> Core.settings.getBool("displayallmessage")).size(30, 30).tooltip("开关信息板全显示");
+                tt.button(Blocks.worldMessage.emoji(), flatTogglet, () -> Settings.toggle("displayallmessage")).checked(a -> RenderExt.displayAllMessage).size(30, 30).tooltip("开关信息板全显示");
                 tt.button(Blocks.worldProcessor.emoji(), Styles.flatBordert, () -> {
                     showWorldProcessorInfo();
                     searchBlock = Blocks.worldProcessor;
