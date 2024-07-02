@@ -34,16 +34,18 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | openssl enc -d -base64 -in - -out ../bekeystore.jks
       - name: Build
         run: |
-          gradle desktop:dist core:genLoaderModAll -Pbuildversion=${RELEASE_VERSION}
+          gradle desktop:dist server:dist -Pbuildversion=${RELEASE_VERSION}
           mkdir artifacts
           mv desktop/build/libs/Mindustry.jar artifacts/MindustryX-${{env.RELEASE_VERSION}}-Desktop.jar
-          mv core/build/distributions/MindustryX.loader.dex.jar artifacts/MindustryX-${{env.RELEASE_VERSION}}.loader.dex.jar
+          mv server/build/libs/server-release.jar artifacts/server-${{env.RELEASE_VERSION}}.jar
       - name: Build Android
         env:
           keystore_password: ${{ secrets.KEYSTORE_PASSWORD_SECRET }}
           keystore_alias_password: ${{ secrets.KEYSTORE_PASSWORD_SECRET }}
           keystore_alias: MindustryX
         run: |
+          sed -i 's/tinylake.mindustryX/tinylake.mindustryX.be/g' android/build.gradle
+          sed -i 's/MindustryX/MindustryX BE/g' android/res/values/strings.xml
           gradle android:assembleRelease -Pbuildversion=${RELEASE_VERSION}
           mv android/build/outputs/apk/release/android-release.apk artifacts/MindustryX-${{env.RELEASE_VERSION}}-Android.apk
       - name: Update Tag
