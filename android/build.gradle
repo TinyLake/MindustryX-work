@@ -44,8 +44,6 @@ android{
     }
 
     defaultConfig{
-        Properties props = loadVersionProps()
-        Integer vcode = props['androidBuildCode']?.toInteger() ?: 1
         def versionNameResult = "$versionNumber-$versionType-${getBuildVersion().replace(" ", "-")}"
 
         applicationId "com.github.tinylake.mindustryX"
@@ -53,9 +51,12 @@ android{
         targetSdkVersion 33
         
         versionName versionNameResult
-        versionCode = vcode
+        versionCode = 1
 
         if(project.hasProperty("release")){
+            Properties props = loadVersionProps()
+            Integer vcode = props['androidBuildCode']?.toInteger() ?: 1
+            versionCode = vcode
             props['androidBuildCode'] = (vcode + 1).toString()
             props.store(file('../core/assets/version.properties').newWriter(), null)
         }
