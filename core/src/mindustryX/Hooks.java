@@ -6,8 +6,8 @@ import arc.util.*;
 import mindustry.*;
 import mindustry.gen.*;
 import mindustry.input.*;
-import mindustryX.features.*;
 import mindustryX.features.Settings;
+import mindustryX.features.*;
 import mindustryX.features.ui.*;
 
 import java.net.*;
@@ -75,7 +75,7 @@ public class Hooks implements ApplicationListener{
     }
 
     public static void pollKeys(){
-        if(Core.scene.hasField()) return;
+        if(Vars.headless || Core.scene.hasField()) return;
         if(Core.input.keyTap(Binding.toggle_unit)){
             RenderExt.unitHide = !RenderExt.unitHide;
         }

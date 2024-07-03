@@ -1,7 +1,6 @@
 package mindustryX.mods.claj;
 
 import arc.scene.ui.layout.*;
-import arc.struct.*;
 import mindustry.*;
 import mindustry.gen.*;
 import mindustry.mod.*;
@@ -13,6 +12,7 @@ public class Claj extends Plugin{
 
     @Override
     public void init(){
+        if(Vars.headless) return;
         ClajIntegration.load();
         joinViaClaj = new JoinViaClajDialog();
         manageRooms = new ManageRoomsDialog();
