@@ -210,14 +210,9 @@ public class NetServer implements ApplicationListener{
                 return;
             }
 
-            if(Version.build != -1 && !admins.allowsCustomClients()){
-                if(packet.versionType == null || packet.version == -1){
-                    con.kick(KickReason.customClient);
-                    return;
-                }else if((!Version.type.equals("MindustryX") || !"official".equals(packet.versionType)) && !Version.type.equals(packet.versionType)){
-                    con.kick(KickReason.typeMismatch);
-                    return;
-                }
+            if(packet.versionType == null || ((packet.version == -1 || !packet.versionType.equals(Version.type)) && Version.build != -1 && !admins.allowsCustomClients())){
+                con.kick(!Version.type.equals(packet.versionType) ? KickReason.typeMismatch : KickReason.customClient);
+                return;
             }
 
             boolean preventDuplicates = headless && netServer.admins.isStrict();

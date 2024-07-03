@@ -97,7 +97,7 @@ public class NetClient implements ApplicationListener{
             c.locale = locale;
             c.mods = mods.getModStrings();
             c.mobile = mobile;
-            c.versionType = "official";
+            c.versionType = Version.type;
             c.color = player.color.rgba();
             c.usid = getUsid(packet.addressTCP);
             c.uuid = platform.getUUID();
