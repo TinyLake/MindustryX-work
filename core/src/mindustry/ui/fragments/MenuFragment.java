@@ -111,18 +111,6 @@ public class MenuFragment{
                     Tex.paneTop.draw(0, 0, Core.graphics.getWidth(), Core.scene.marginBottom);
                 }
             });
-        }else if(becontrol.active()){
-            parent.fill(c -> c.bottom().right().button("@be.check", Icon.refresh, () -> {
-                ui.loadfrag.show();
-                becontrol.checkUpdate(result -> {
-                    ui.loadfrag.hide();
-                    if(!result){
-                        ui.showInfo("@be.noupdates");
-                    }
-                });
-            }).size(200, 60).name("becheck").update(t -> {
-                t.getLabel().setColor(becontrol.isUpdateAvailable() ? Tmp.c1.set(Color.white).lerp(Pal.accent, Mathf.absin(5f, 1f)) : Color.white);
-            }));
         }
 
         parent.fill(c -> c.bottom().left().table(t -> {
