@@ -158,6 +158,6 @@ object AutoUpdate {
         val args = if (OS.isMac) arrayOf<String>(Vars.javaPath, "-XstartOnFirstThread", "-DlastBuild=" + Version.build, "-Dberestart", "-Dbecopy=" + fileDest.absolutePath(), "-jar", file.absolutePath())
         else arrayOf<String>(Vars.javaPath, "-DlastBuild=" + Version.build, "-Dberestart", "-Dbecopy=" + fileDest.absolutePath(), "-jar", file.absolutePath())
         Runtime.getRuntime().exec(args)
-        exitProcess(0)
+        Core.app.exit()
     }
 }
