@@ -18,7 +18,7 @@ import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.logic.LStatements.*;
 import mindustry.ui.*;
-import mindustry.ui.dialogs.BaseDialog;
+import mindustryX.*;
 import mindustryX.features.*;
 
 public class LCanvas extends Table{
@@ -353,13 +353,17 @@ public class LCanvas extends Table{
 
                 addressLabel = t.add(index + "").style(Styles.outlineLabel).color(color).padRight(8).get();
 
-                t.button(Icon.add, Styles.logici, () -> {
-                }).size(24f).padRight(6).get().tapped(this::arcAppend);
+                t.button(Icon.add, Styles.logici, () -> LogicDialog.showAddStatement(privileged, (it) -> {
+                    statements.addChildAfter(this, new StatementElem(it));
+                    statements.layout();
+                })).size(24f).padRight(6)
+                .get().tapped(()->{});//no drag
 
-                t.button(Icon.copy, Styles.logici, () -> {
-                }).size(24f).padRight(6).get().tapped(this::copy);
+                t.button(Icon.copy, Styles.logici, this::copy).size(24f).padRight(6)
+                .get().tapped(()->{});
 
-                t.button(st instanceof PrintStatement ? Icon.fileText : Icon.pencil, Styles.logici, () -> arcTrans()).size(24f).padRight(6).get().tapped(()->{});
+                t.button(st instanceof PrintStatement ? Icon.fileText : Icon.pencil, Styles.logici, this::toggleComment).size(24f).padRight(6)
+                .get().tapped(()->{});
 
                 t.button(Icon.cancel, Styles.logici, () -> {
                     remove();
@@ -443,75 +447,32 @@ public class LCanvas extends Table{
             }
         }
 
-        public void arcAppend(){
-            BaseDialog dialog = new BaseDialog("@add");
-            dialog.cont.table(table -> {
-                table.background(Tex.button);
-                table.pane(t -> {
-                    for(Prov<LStatement> prov : LogicIO.allStatements){
-                        LStatement example = prov.get();
-                        if(example instanceof InvalidStatement || example.hidden() || (example.privileged() && !privileged) || (example.nonPrivileged() && privileged)) continue;
-
-                        LCategory category = example.category();
-                        Table cat = t.find(category.name);
-                        if(cat == null){
-                            t.table(s -> {
-                                if(category.icon != null){
-                                    s.image(category.icon, Pal.darkishGray).left().size(15f).padRight(10f);
-                                }
-                                s.add(category.localized()).color(Pal.darkishGray).left().tooltip(category.description());
-                                s.image(Tex.whiteui, Pal.darkishGray).left().height(5f).growX().padLeft(10f);
-                            }).growX().pad(5f).padTop(10f);
-
-                            t.row();
-
-                            cat = t.table(c -> {
-                                c.top().left();
-                            }).name(category.name).top().left().growX().fillY().get();
-                            t.row();
-                        }
-
-                        TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(Styles.flatt);
-                        style.fontColor = category.color;
-                        style.font = Fonts.outline;
-
-                        cat.button(example.name(), style, () -> {
-                            statements.addChildAt(statements.getChildren().indexOf(this) + 1,new StatementElem(prov.get()));
-                            statements.layout();
-                            dialog.hide();
-                        }).size(130f, 50f).self(c -> tooltip(c, "lst." + example.name())).top().left();
-
-                        if(cat.getChildren().size % 3 == 0) cat.row();
-                    }
-                }).grow();
-            }).fill().maxHeight(Core.graphics.getHeight() * 0.8f);
-            dialog.addCloseButton();
-            dialog.show();
-        }
-
-        public void arcTrans(){ //LC：md这玩意真难搞，这一小段代码研究了一整天才找到如何解决。
-            LStatement stNew;
-            int child = statements.getChildren().indexOf(this) + 1;
+        //原始作者: LC
+        @MindustryXApi
+        public void toggleComment(){
+            StatementElem newElem;
             if(st instanceof PrintStatement pst){ //print->代码
-                Seq<LStatement> lsStatement = LAssembler.read(pst.value.replace("_"," "),privileged);
-                stNew = lsStatement.first();
-                if (stNew instanceof InvalidStatement) UIExt.announce("[orange]警告：转换失败，请输入正确格式\n[cyan]" + LogicDialog.transText);
-                else if(stNew instanceof JumpStatement jst && jst.destIndex != -1){
-                    jst.dest = (StatementElem) statements.getChildren().get(jst.destIndex);
+                String code = pst.value.replace("_", " ");
+                Seq<LStatement> lsStatement = LAssembler.read(code, privileged);
+                LStatement stNew = lsStatement.first();
+                if(stNew instanceof InvalidStatement){
+                    UIExt.announce("[orange]警告：转换失败，请输入正确格式");
+                    return;
                 }
-            }else if (st instanceof InvalidStatement){
-                stNew = LogicIO.read(new String[]{"print",LogicDialog.transText},2);
+                newElem = new StatementElem(stNew);
             }else{  //代码->print
+                st.saveUI();
                 StringBuilder thisText = new StringBuilder();
-                LogicIO.write(st,thisText);
-                LogicDialog.transText = thisText.toString();
-                stNew = LogicIO.read(new String[]{"print",LogicDialog.transText},2);
+                LogicIO.write(st, thisText);
+                var stNew = new PrintStatement();
+                stNew.value = thisText.toString();
+                newElem = new StatementElem(stNew);
             }
-            StatementElem stNewElem = new StatementElem(stNew);
-            statements.addChildAt(child, stNewElem);
+            statements.addChildBefore(this, newElem);
             remove();
-            for(Element ste :  statements.seq){
-                if(((StatementElem)ste).st instanceof JumpStatement jst && jst.dest == st.elem) jst.dest = stNewElem;
+            for(Element c : statements.getChildren()){
+                if(c instanceof StatementElem ste && ste.st instanceof JumpStatement jst && (jst.dest == null || jst.dest == st.elem))
+                    jst.dest = (StatementElem)statements.getChildren().get(jst.destIndex);
             }
             statements.layout();
         }

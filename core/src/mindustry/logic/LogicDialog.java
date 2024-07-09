@@ -19,7 +19,9 @@ import mindustry.logic.LStatements.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
 import mindustry.world.blocks.logic.*;
+import mindustryX.*;
 import mindustryX.features.*;
+import mindustryX.features.Settings;
 
 import static mindustry.Vars.*;
 import static mindustry.logic.LCanvas.*;
@@ -29,17 +31,12 @@ public class LogicDialog extends BaseDialog{
     Cons<String> consumer = s -> {};
     boolean privileged;
     public static float period = 15f;
-    float counter = 0f;
     Table varTable = new Table();
-    Table mainTable = new Table();
     public static boolean refreshing = true;
-
-    public static String transText = "";
+    private static boolean doRefresh, noSave;
 
     @Nullable LExecutor executor;
     GlobalVarsDialog globalsDialog = new GlobalVarsDialog();
-
-    private boolean noSave = false;
 
     public LogicDialog(){
         super("logic");
@@ -61,37 +58,27 @@ public class LogicDialog extends BaseDialog{
         onResize(() -> {
             setup();
             canvas.rebuild();
-            varsTable();
+            buildVarsTable();
         });
 
-
-        add(mainTable).grow().name("canvas");
-        rebuildMain();
+        add(canvas).grow().name("canvas");
+        addChild(new Table(t->{
+            t.name = "vars";
+            t.setFillParent(true);
+            t.center().left().add(varTable).growY().visible(() -> Core.settings.getBool("logicSupport"));
+            Interval interval = new Interval();
+            varTable.update(() -> {
+                if(!varTable.hasChildren()) buildVarsTable();
+                doRefresh = refreshing && interval.get(period);
+            });
+        }));
 
         row();
 
         add(buttons).growX().name("canvas");
     }
 
-    private void rebuildMain(){
-        mainTable.clear();
-        canvas.rebuild();
-        if(!Core.settings.getBool("logicSupport"))  {
-            mainTable.add(canvas).grow();
-        }else{
-            varsTable();
-            mainTable.add(varTable);
-            mainTable.add(canvas).grow();
-            counter=0;
-            varTable.update(()->{
-                counter+=Time.delta;
-                if(counter>period && refreshing){
-                    counter=0;
-                }
-            });
-        }
-    }
-    private void varsTable(){
+    private void buildVarsTable(){
         varTable.clear();
         varTable.table(t->{
             t.table(tt->{
@@ -106,14 +93,9 @@ public class LogicDialog extends BaseDialog{
             });
             t.row();
             t.table(tt -> {
-                tt.button(Icon.cancelSmall, Styles.cleari, () -> {
-                    Core.settings.put("logicSupport", !Core.settings.getBool("logicSupport"));
-                    UIExt.announce("[orange]已关闭逻辑辅助器！");
-                    rebuildMain();
-                }).size(50f);
                 tt.button(Icon.refreshSmall, Styles.cleari, () -> {
                     executor.build.updateCode(executor.build.code);
-                    varsTable();
+                    buildVarsTable();
                     UIExt.announce("[orange]已更新逻辑显示！");
                 }).size(50f);
                 tt.button(Icon.pauseSmall, Styles.cleari, () -> {
@@ -162,14 +144,14 @@ public class LogicDialog extends BaseDialog{
                                 UIExt.announce(text1);
                             });
                             tv.update(()->{
-                                if(counter + Time.delta>period && refreshing){
+                                if(doRefresh){
                                     varPro.setText(arcVarsText(s));
                                 }
                             });
                         }).padLeft(20f);
 
                         tt.update(()->{
-                            if(counter + Time.delta>period && refreshing){
+                            if(doRefresh){
                                 tt.setColor(arcVarsColor(s));
                             }
                         });
@@ -188,14 +170,14 @@ public class LogicDialog extends BaseDialog{
                             UIExt.announce(text);
                         });
                         tv.update(()->{
-                            if(counter + Time.delta>period && refreshing){
+                            if(doRefresh){
                                 varPro.setText(executor.textBuffer.toString());
                             }
                         });
                     }).padLeft(20f);
 
                     tt.update(()->{
-                        if(counter + Time.delta>period && refreshing){
+                        if(doRefresh){
                             tt.setColor(Color.valueOf("#e600e6"));
                         }
                     });
@@ -292,9 +274,9 @@ public class LogicDialog extends BaseDialog{
                         hide();
                     })).marginLeft(12f);
                     t.row();
-                    t.button("[orange]逻辑辅助器",Icon.settings,style,()-> {
-                        Core.settings.put("logicSupport",!Core.settings.getBool("logicSupport"));
-                        rebuildMain();
+                    t.button("[orange]逻辑辅助器", Icon.settings, style, () -> {
+                        Settings.toggle("logicSupport");
+                        dialog.hide();
                     }).marginLeft(12f);
                 });
             });
@@ -376,54 +358,60 @@ public class LogicDialog extends BaseDialog{
         }).name("variables").disabled(b -> executor == null || executor.vars.length == 0);
 
         buttons.button("@add", Icon.add, () -> {
-            BaseDialog dialog = new BaseDialog("@add");
-            dialog.cont.table(table -> {
-                table.background(Tex.button);
-                table.pane(t -> {
-                    for(Prov<LStatement> prov : LogicIO.allStatements){
-                        LStatement example = prov.get();
-                        if(example instanceof InvalidStatement || example.hidden() || (example.privileged() && !privileged) || (example.nonPrivileged() && privileged)) continue;
-
-                        LCategory category = example.category();
-                        Table cat = t.find(category.name);
-                        if(cat == null){
-                            t.table(s -> {
-                                if(category.icon != null){
-                                    s.image(category.icon, Pal.darkishGray).left().size(15f).padRight(10f);
-                                }
-                                s.add(category.localized()).color(Pal.darkishGray).left().tooltip(category.description());
-                                s.image(Tex.whiteui, Pal.darkishGray).left().height(5f).growX().padLeft(10f);
-                            }).growX().pad(5f).padTop(10f);
-
-                            t.row();
-
-                            cat = t.table(c -> {
-                                c.top().left();
-                            }).name(category.name).top().left().growX().fillY().get();
-                            t.row();
-                        }
-
-                        TextButtonStyle style = new TextButtonStyle(Styles.flatt);
-                        style.fontColor = category.color;
-                        style.font = Fonts.outline;
-
-                        cat.button(example.name(), style, () -> {
-                            canvas.add(prov.get());
-                            dialog.hide();
-                        }).size(130f, 50f).self(c -> tooltip(c, "lst." + example.name())).top().left();
-
-                        if(cat.getChildren().size % 3 == 0) cat.row();
-                    }
-                }).grow();
-            }).fill().maxHeight(Core.graphics.getHeight() * 0.8f);
-            dialog.addCloseButton();
-            dialog.show();
+            showAddStatement(privileged, (t) -> canvas.add(t));
         }).disabled(t -> canvas.statements.getChildren().size >= LExecutor.maxInstructions);
+    }
+
+    @MindustryXApi
+    public static void showAddStatement(boolean privileged, Cons<LStatement> cons){
+        BaseDialog dialog = new BaseDialog("@add");
+        dialog.cont.table(table -> {
+            table.background(Tex.button);
+            table.pane(t -> {
+                for(Prov<LStatement> prov : LogicIO.allStatements){
+                    LStatement example = prov.get();
+                    if(example instanceof InvalidStatement || example.hidden() || (example.privileged() && !privileged) || (example.nonPrivileged() && privileged)) continue;
+
+                    LCategory category = example.category();
+                    Table cat = t.find(category.name);
+                    if(cat == null){
+                        t.table(s -> {
+                            if(category.icon != null){
+                                s.image(category.icon, Pal.darkishGray).left().size(15f).padRight(10f);
+                            }
+                            s.add(category.localized()).color(Pal.darkishGray).left().tooltip(category.description());
+                            s.image(Tex.whiteui, Pal.darkishGray).left().height(5f).growX().padLeft(10f);
+                        }).growX().pad(5f).padTop(10f);
+
+                        t.row();
+
+                        cat = t.table(c -> {
+                            c.top().left();
+                        }).name(category.name).top().left().growX().fillY().get();
+                        t.row();
+                    }
+
+                    TextButtonStyle style = new TextButtonStyle(Styles.flatt);
+                    style.fontColor = category.color;
+                    style.font = Fonts.outline;
+
+                    cat.button(example.name(), style, () -> {
+                        cons.get(prov.get());
+                        dialog.hide();
+                    }).size(130f, 50f).self(c -> tooltip(c, "lst." + example.name())).top().left();
+
+                    if(cat.getChildren().size % 3 == 0) cat.row();
+                }
+            }).grow();
+        }).fill().maxHeight(Core.graphics.getHeight() * 0.8f);
+        dialog.addCloseButton();
+        dialog.show();
     }
 
     public void show(String code, LExecutor executor, boolean privileged, Cons<String> modified){
         this.executor = executor;
         this.privileged = privileged;
+        varTable.clearChildren();
         canvas.statements.clearChildren();
         canvas.rebuild();
         canvas.privileged = privileged;
@@ -438,7 +426,6 @@ public class LogicDialog extends BaseDialog{
                 modified.get(result);
             }
         };
-        varsTable();
         show();
     }
 }
