@@ -1,9 +1,16 @@
 package mindustry.world.blocks.logic;
 
+import arc.*;
+import arc.graphics.Color;
+import arc.scene.event.*;
+import arc.scene.ui.layout.Table;
 import arc.util.io.*;
 import mindustry.gen.*;
+import mindustry.ui.Styles;
 import mindustry.world.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
+import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
 
@@ -18,6 +25,7 @@ public class MemoryBlock extends Block{
         drawDisabled = false;
         envEnabled = Env.any;
         canOverdrive = false;
+        configurable = true;
     }
 
     @Override
@@ -38,6 +46,8 @@ public class MemoryBlock extends Block{
 
     public class MemoryBuild extends Building{
         public double[] memory = new double[memoryCapacity];
+        private static int numPerRow = 10;
+        private static final Format format = new Format(0, true);
 
         //massive byte size means picking up causes sync issues
         @Override
@@ -68,6 +78,48 @@ public class MemoryBlock extends Block{
             write.i(memory.length);
             for(double v : memory){
                 write.d(v);
+            }
+        }
+
+        @Override
+        public void buildConfiguration(Table table){
+            if(!RenderExt.showOtherInfo && !accessible()){
+                //go away
+                deselect();
+                return;
+            }
+
+            Table vars = new Table();
+            table.background(Styles.black3);
+            table.table(t -> {
+                t.add("每行 " + numPerRow).get();
+                t.slider(2, 15, 1, numPerRow, res -> {
+                    numPerRow = (int)res;
+                    vars.clear();
+                    buildVarsPane(vars);
+                    table.pack();
+                });
+
+                t.add("保留小数: ");
+                t.slider(0, 8, 1, format.getDecimal(), res -> format.setDecimal((int)res));
+            }).row();
+            table.pane(vars).maxWidth(1000f).maxHeight(500f).pad(4);
+
+            buildVarsPane(vars);
+        }
+
+        public void buildVarsPane(Table t){
+            for(int i = 0; i < memory.length; i++){
+                int finalI = i;
+                t.add("" + i).color(Color.lightGray);
+                t.label(() -> format.format((float)memory[finalI])).padLeft(8)
+                .touchable(Touchable.enabled).get().tapped(() -> {
+                    Core.app.setClipboardText(memory[finalI] + "");
+                    UIExt.announce("[cyan]复制内存[white]\n " + memory[finalI]);
+                });
+                if((i + 1) % numPerRow == 0) t.row();
+                else t.add("|").color(((i % numPerRow) % 2 == 0) ? Color.cyan : Color.acid)
+                .padLeft(12).padRight(12);
             }
         }
 

@@ -18,6 +18,8 @@ import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.logic.LStatements.*;
 import mindustry.ui.*;
+import mindustryX.*;
+import mindustryX.features.*;
 
 public class LCanvas extends Table{
     public static final int maxJumpsDrawn = 100;
@@ -58,7 +60,7 @@ public class LCanvas extends Table{
 
     /** @return if statement elements should have rows. */
     public static boolean useRows(){
-        return Core.graphics.getWidth() < Scl.scl(900f) * 1.2f;
+        return Core.graphics.getWidth() - (Core.settings.getBool("logicSupport") ? 400f : 0f) < Scl.scl(900f) * 1.2f;
     }
 
     public static void tooltip(Cell<?> cell, String key){
@@ -351,14 +353,23 @@ public class LCanvas extends Table{
 
                 addressLabel = t.add(index + "").style(Styles.outlineLabel).color(color).padRight(8).get();
 
-                t.button(Icon.copy, Styles.logici, () -> {
-                }).size(24f).padRight(6).get().tapped(this::copy);
+                t.button(Icon.add, Styles.logici, () -> LogicDialog.showAddStatement(privileged, (it) -> {
+                    statements.addChildAfter(this, new StatementElem(it));
+                    statements.layout();
+                })).size(24f).padRight(6)
+                .get().tapped(()->{});//no drag
+
+                t.button(Icon.copy, Styles.logici, this::copy).size(24f).padRight(6)
+                .get().tapped(()->{});
+
+                t.button(st instanceof PrintStatement ? Icon.fileText : Icon.pencil, Styles.logici, this::toggleComment).size(24f).padRight(6)
+                .get().tapped(()->{});
 
                 t.button(Icon.cancel, Styles.logici, () -> {
                     remove();
                     dragging = null;
                     statements.layout();
-                }).size(24f);
+                }).size(24f).padLeft(Vars.mobile?48:0);
 
                 t.addListener(new InputListener(){
                     float lastx, lasty;
@@ -435,6 +446,39 @@ public class LCanvas extends Table{
                 copy.setupUI();
             }
         }
+
+        //原始作者: LC
+        @MindustryXApi
+        public void toggleComment(){
+            StatementElem newElem;
+            if(st instanceof PrintStatement pst){ //print->代码
+                String code = pst.value.replace("_", " ");
+                Seq<LStatement> lsStatement = LAssembler.read(code, privileged);
+                LStatement stNew = lsStatement.first();
+                if(stNew instanceof InvalidStatement){
+                    UIExt.announce("[orange]警告：转换失败，请输入正确格式");
+                    return;
+                }
+                newElem = new StatementElem(stNew);
+            }else{  //代码->print
+                st.saveUI();
+                StringBuilder thisText = new StringBuilder();
+                LogicIO.write(st, thisText);
+                var stNew = new PrintStatement();
+                stNew.value = thisText.toString();
+                newElem = new StatementElem(stNew);
+            }
+            statements.addChildBefore(this, newElem);
+            remove();
+            for(Element c : statements.getChildren()){
+                if(c instanceof StatementElem ste && ste.st instanceof JumpStatement jst && (jst.dest == null || jst.dest == st.elem)){
+                    if(0 > jst.destIndex || jst.destIndex >= statements.getChildren().size) continue;
+                    jst.dest = (StatementElem)statements.getChildren().get(jst.destIndex);
+                }
+            }
+            statements.layout();
+        }
+
 
         @Override
         public void draw(){
@@ -584,7 +628,7 @@ public class LCanvas extends Table{
             float dist = 100f;
 
             //square jumps
-            if(false){
+            if(Core.settings.getBool("rectJumpLine")){
                 float len = Scl.scl(Mathf.randomSeed(hashCode(), 10, 50));
 
                 float maxX = Math.max(x, x2) + len;

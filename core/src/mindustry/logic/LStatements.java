@@ -21,6 +21,7 @@ import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.meta.*;
 import mindustryX.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 import static mindustry.logic.LCanvas.*;
@@ -881,6 +882,17 @@ public class LStatements{
             table.table(this::rebuild);
 
             table.add().growX();
+            if(!mobile || !Core.graphics.isPortrait()){
+                table.button("JUMP", () -> {
+                    if(dest == null) return;
+                    //table, elem, dragLayout, table(y), scrollPane
+                    var canvas = dest.parent.parent;
+                    var scroll = (ScrollPane)canvas.parent;
+                    scroll.setScrollY(scroll.getMaxY() - dest.y + scroll.getHeight() * 0.5f);
+                    saveUI();
+                    UIExt.announce("[gold]跳转行号:[] " + destIndex);
+                });
+            }
             table.add(new JumpButton(() -> dest, s -> dest = s)).size(30).right().padLeft(-8);
 
             String name = name();
