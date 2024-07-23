@@ -90,7 +90,7 @@ public class MobileInput extends InputHandler implements GestureListener{
     void checkTargets(float x, float y){
         Unit unit = Units.closestEnemy(player.team(), x, y, 20f, u -> !u.dead);
 
-        if(unit != null && !player.dead() && player.unit().type.canAttack){
+        if(unit != null && player.unit().type.canAttack){
             player.unit().mineTile = null;
             target = unit;
         }else{
@@ -126,21 +126,18 @@ public class MobileInput extends InputHandler implements GestureListener{
             }
         }
 
-        if(!player.dead()){
-            for(var plan : player.unit().plans()){
-                Tile other = world.tile(plan.x, plan.y);
+        for(var plan : player.unit().plans()){
+            Tile other = world.tile(plan.x, plan.y);
 
-                if(other == null || plan.breaking) continue;
+            if(other == null || plan.breaking) continue;
 
-                r1.setSize(plan.block.size * tilesize);
-                r1.setCenter(other.worldx() + plan.block.offset, other.worldy() + plan.block.offset);
+            r1.setSize(plan.block.size * tilesize);
+            r1.setCenter(other.worldx() + plan.block.offset, other.worldy() + plan.block.offset);
 
-                if(r2.overlaps(r1)){
-                    return true;
-                }
+            if(r2.overlaps(r1)){
+                return true;
             }
         }
-
         return false;
     }
 
@@ -266,7 +263,7 @@ public class MobileInput extends InputHandler implements GestureListener{
     }
 
     boolean showCancel(){
-        return !player.dead() && (player.unit().isBuilding() || block != null || mode == breaking || !selectPlans.isEmpty()) && !hasSchem();
+        return (player.unit().isBuilding() || block != null || mode == breaking || !selectPlans.isEmpty()) && !hasSchem();
     }
 
     boolean hasSchem(){
@@ -280,9 +277,7 @@ public class MobileInput extends InputHandler implements GestureListener{
             t.visible(this::showCancel);
             t.bottom().left();
             t.button("@cancel", Icon.cancel, () -> {
-                if(!player.dead()){
-                    player.unit().clearBuilding();
-                }
+                player.unit().clearBuilding();
                 selectPlans.clear();
                 mode = none;
                 block = null;
@@ -869,7 +864,7 @@ public class MobileInput extends InputHandler implements GestureListener{
             }
         }
 
-        if(player.shooting && !player.dead() && (player.unit().activelyBuilding() || player.unit().mining())){
+        if(player.shooting && (player.unit().activelyBuilding() || player.unit().mining())){
             player.shooting = false;
         }
     }
@@ -1042,7 +1037,7 @@ public class MobileInput extends InputHandler implements GestureListener{
         unit.movePref(movement);
 
         //update shooting if not building + not mining
-        if(!unit.activelyBuilding() && unit.mineTile == null){
+        if(!player.unit().activelyBuilding() && player.unit().mineTile == null){
 
             //autofire targeting
             if(manualShooting){
@@ -1051,7 +1046,7 @@ public class MobileInput extends InputHandler implements GestureListener{
             }else if(target == null){
                 player.shooting = false;
                 if(Core.settings.getBool("autotarget") && !(player.unit() instanceof BlockUnitUnit u && u.tile() instanceof ControlBlock c && !c.shouldAutoTarget())){
-                    if(unit.type.canAttack){
+                    if(player.unit().type.canAttack){
                         target = Units.closestTarget(unit.team, unit.x, unit.y, range, u -> u.checkTarget(type.targetAir, type.targetGround), u -> type.targetGround);
                     }
 

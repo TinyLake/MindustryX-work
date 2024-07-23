@@ -279,7 +279,7 @@ public class TypeIO{
     }
 
     public static void writeUnit(Writes write, Unit unit){
-        write.b(unit == null ? 0 : unit instanceof BlockUnitc ? 1 : 2);
+        write.b(unit == null || unit.isNull() ? 0 : unit instanceof BlockUnitc ? 1 : 2);
 
         //block units are special
         if(unit instanceof BlockUnitc){
@@ -295,14 +295,15 @@ public class TypeIO{
         byte type = read.b();
         int id = read.i();
         //nothing
-        if(type == 0) return null;
+        if(type == 0) return Nulls.unit;
         if(type == 2){ //standard unit
-            return Groups.unit.getByID(id);
+            Unit unit = Groups.unit.getByID(id);
+            return unit == null ? Nulls.unit : unit;
         }else if(type == 1){ //block
             Building tile = world.build(id);
-            return tile instanceof ControlBlock cont ? cont.unit() : null;
+            return tile instanceof ControlBlock cont ? cont.unit() : Nulls.unit;
         }
-        return null;
+        return Nulls.unit;
     }
 
     public static void writeCommand(Writes write, @Nullable UnitCommand command){

@@ -622,22 +622,21 @@ public class NetClient implements ApplicationListener{
 
     void sync(){
         if(timer.get(0, playerSyncTime)){
-            boolean dead = player.dead();
-            Unit unit = dead ? null : player.unit();
-            int uid = dead || unit == null ? -1 : unit.id;
+            Unit unit = player.dead() ? Nulls.unit : player.unit();
+            int uid = player.dead() ? -1 : unit.id;
 
             Call.clientSnapshot(
             lastSent++,
             uid,
-            dead,
-            dead ? player.x : unit.x, dead ? player.y : unit.y,
-            dead ? 0f : unit.aimX(), dead ? 0f : unit.aimY(),
-            unit == null ? 0f : unit.rotation,
+            player.dead(),
+            player.dead() ? player.x : unit.x, player.dead() ? player.y : unit.y,
+            player.unit().aimX(), player.unit().aimY(),
+            unit.rotation,
             unit instanceof Mechc m ? m.baseRotation() : 0,
-            unit == null ? 0f : unit.vel.x, unit == null ? 0f : unit.vel.y,
-            dead ? null : unit.mineTile,
+            unit.vel.x, unit.vel.y,
+            player.unit().mineTile,
             player.boosting, player.shooting, ui.chatfrag.shown(), control.input.isBuilding,
-            player.isBuilder() && unit != null ? unit.plans : null,
+            player.isBuilder() ? player.unit().plans : null,
             Core.camera.position.x, Core.camera.position.y,
             Core.camera.width, Core.camera.height
             );

@@ -116,9 +116,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     private WidgetGroup group = new WidgetGroup();
 
     private final Eachable<BuildPlan> allPlans = cons -> {
-        if(!player.dead()){
-            player.unit().plans().each(cons);
-        }
+        player.unit().plans().each(cons);
         selectPlans.each(cons);
         linePlans.each(cons);
     };
@@ -238,6 +236,9 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     public static void commandUnits(Player player, int[] unitIds, @Nullable Building buildTarget, @Nullable Unit unitTarget, @Nullable Vec2 posTarget, boolean queueCommand, boolean finalBatch){
         if(player == null || unitIds == null) return;
 
+        //why did I ever think this was a good idea
+        if(unitTarget != null && unitTarget.isNull()) unitTarget = null;
+
         if(net.server() && !netServer.admins.allowAction(player, ActionType.commandUnits, event -> {
             event.unitIDs = unitIds;
         })){
@@ -259,7 +260,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
                 }
 
                 if(teamTarget != null && teamTarget.team() != player.team() &&
-                !(teamTarget instanceof Unit u && !unit.canTarget(u)) && !(teamTarget instanceof Building && !unit.type.targetGround)){
+                    !(teamTarget instanceof Unit u && !unit.canTarget(u)) && !(teamTarget instanceof Building && !unit.type.targetGround)){
 
                     anyCommandedTarget = true;
                     if(queueCommand){
@@ -281,7 +282,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
                 if(ai.commandQueue.size <= 0){
                     ai.group = null;
                 }
-
+                
                 //remove when other player command
                 if(!headless && player != Vars.player){
                     control.input.selectedUnits.remove(unit);
@@ -488,6 +489,8 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
 
     @Remote(targets = Loc.server, called = Loc.server)
     public static void pickedUnitPayload(Unit unit, Unit target){
+        if(target == Nulls.unit) return;
+
         if(target != null && unit instanceof Payloadc pay){
             pay.pickup(target);
         }else if(target != null){
@@ -596,7 +599,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         if(build == null) return;
 
         if(net.server() && (!Units.canInteract(player, build) ||
-        !netServer.admins.allowAction(player, ActionType.rotate, build.tile(), action -> action.rotation = Mathf.mod(build.rotation + Mathf.sign(direction), 4)))){
+            !netServer.admins.allowAction(player, ActionType.rotate, build.tile(), action -> action.rotation = Mathf.mod(build.rotation + Mathf.sign(direction), 4)))){
             throw new ValidateException(player, "Player cannot rotate a block.");
         }
 
@@ -615,7 +618,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         if(build == null) return;
 
         if(net.server() && (!Units.canInteract(player, build) ||
-        !netServer.admins.allowAction(player, ActionType.configure, build.tile, action -> action.config = value))){
+            !netServer.admins.allowAction(player, ActionType.configure, build.tile, action -> action.config = value))){
 
             if(player.con != null){
                 var packet = new TileConfigCallPacket(); //undo the config on the client
@@ -694,7 +697,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
 
             player.unit(unit);
 
-            if(before != null){
+            if(before != null && !before.isNull()){
                 if(before.spawnedByCore){
                     unit.dockedType = before.type;
                 }else if(before.dockedType != null && before.dockedType.coreUnitDock){
@@ -809,9 +812,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         }
 
         playerPlanTree.clear();
-        if(!player.dead()){
-            player.unit().plans.each(playerPlanTree::insert);
-        }
+        player.unit().plans.each(playerPlanTree::insert);
 
         player.typing = ui.chatfrag.shown();
 
@@ -823,7 +824,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
             player.unit().updateBuilding(isBuilding);
         }
 
-        if(!player.dead() && player.shooting && !wasShooting && player.unit().hasWeapons() && state.rules.unitAmmo && !player.team().rules().infiniteAmmo && player.unit().ammo <= 0){
+        if(player.shooting && !wasShooting && player.unit().hasWeapons() && state.rules.unitAmmo && !player.team().rules().infiniteAmmo && player.unit().ammo <= 0){
             player.unit().type.weapons.first().noAmmoSound.at(player.unit());
         }
 
@@ -1672,9 +1673,9 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
 
     boolean canMine(Tile tile){
         return !Core.scene.hasMouse()
-        && player.unit().validMine(tile)
-        && player.unit().acceptsItem(player.unit().getMineResult(tile))
-        && !((!Core.settings.getBool("doubletapmine") && tile.floor().playerUnmineable) && tile.overlay().itemDrop == null);
+            && player.unit().validMine(tile)
+            && player.unit().acceptsItem(player.unit().getMineResult(tile))
+            && !((!Core.settings.getBool("doubletapmine") && tile.floor().playerUnmineable) && tile.overlay().itemDrop == null);
     }
 
     /** Returns the tile at the specified MOUSE coordinates. */
@@ -1840,7 +1841,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
 
     public boolean canShoot(){
         return block == null && !onConfigurable() && !isDroppingItem() && !player.unit().activelyBuilding() &&
-        !(player.unit() instanceof Mechc && player.unit().isFlying()) && !player.unit().mining() && !commandMode;
+            !(player.unit() instanceof Mechc && player.unit().isFlying()) && !player.unit().mining() && !commandMode;
     }
 
     public boolean onConfigurable(){
@@ -1866,7 +1867,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         ItemStack stack = player.unit().stack;
 
         if(build != null && build.acceptStack(stack.item, stack.amount, player.unit()) > 0 && build.interactable(player.team()) &&
-        build.block.hasItems && player.unit().stack().amount > 0 && build.interactable(player.team())){
+                build.block.hasItems && player.unit().stack().amount > 0 && build.interactable(player.team())){
 
             if(!(state.rules.onlyDepositCore && !(build instanceof CoreBuild)) && itemDepositCooldown <= 0f){
                 Call.transferInventory(player, build);
