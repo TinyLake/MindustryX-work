@@ -612,9 +612,22 @@ public class JoinDialog extends BaseDialog{
     }
 
     void safeConnect(String ip, int port, int version){
+        ConnectPacket.clientVersion = Version.build;
         if(version != Version.build && Version.build != -1 && version != -1){
-            ui.showInfo("[scarlet]" + (version > Version.build ? KickReason.clientOutdated : KickReason.serverOutdated) + "\n[]" +
-            Core.bundle.format("server.versions", Version.build, version));
+            new Dialog((version > Version.build ? KickReason.clientOutdated : KickReason.serverOutdated).toString()){{
+                title.setAlignment(Align.center);
+                cont.add(Core.bundle.format("server.versions", Version.build, version)).row();
+                cont.row();
+                cont.add("[gold]MDTX[]: 目标版本可能兼容，你可以选择伪装版本强制加入。\n如果出现[red]网络错误[]或其他问题，表示无法兼容。").row();
+                cont.pack();
+                buttons.button("强制加入", () -> {
+                    hide();
+                    ConnectPacket.clientVersion = version;
+                    connect(ip, port);
+                }).get().getLabel().setWrap(false);
+                buttons.button("@cancel", this::hide);
+                closeOnBack();
+            }}.show();
         }else{
             connect(ip, port);
         }

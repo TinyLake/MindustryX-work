@@ -6,6 +6,7 @@ import arc.util.io.*;
 import arc.util.serialization.*;
 import mindustry.core.*;
 import mindustry.io.*;
+import mindustryX.*;
 
 import java.util.zip.*;
 
@@ -111,6 +112,8 @@ public class Packets{
     }
 
     public static class ConnectPacket extends Packet{
+        @MindustryXApi
+        public static int clientVersion;
         public int version;
         public String versionType;
         public Seq<String> mods;
@@ -120,7 +123,7 @@ public class Packets{
 
         @Override
         public void write(Writes buffer){
-            buffer.i(Version.build);
+            buffer.i(clientVersion != 0 ? clientVersion : Version.build);
             TypeIO.writeString(buffer, versionType);
             TypeIO.writeString(buffer, name);
             TypeIO.writeString(buffer, locale);
