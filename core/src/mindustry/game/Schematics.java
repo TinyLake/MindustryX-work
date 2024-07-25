@@ -38,6 +38,7 @@ import mindustryX.features.*;
 import mindustryX.features.ui.*;
 
 import java.io.*;
+import java.util.concurrent.*;
 import java.util.zip.*;
 
 import static mindustry.Vars.*;
@@ -82,20 +83,34 @@ public class Schematics implements Loadable{
 
         loadLoadouts();
 
+        //MDTX: multithreading schematics load, inspired by FOO
+        var await = new Seq<Future<Schematic>>();
         for(Fi file : schematicDirectory.list()){
-            loadFile(file);
+            await.add(mainExecutor.submit(() -> loadFile(file)));
         }
 
-        platform.getWorkshopContent(Schematic.class).each(this::loadFile);
+        platform.getWorkshopContent(Schematic.class).each(file -> await.add(mainExecutor.submit(() -> loadFile(file))));
 
         //mod-specific schematics, cannot be removed
-        mods.listFiles("schematics", (mod, file) -> {
+        mods.listFiles("schematics", (mod, file) -> await.add(mainExecutor.submit(() -> {
             Schematic s = loadFile(file);
             if(s != null){
                 s.mod = mod;
             }
-        });
+            return s;
+        })));
 
+        await.each((task) -> {
+            try{
+                Schematic s = task.get();
+                if(s == null) return;
+                all.add(s);
+                checkLoadout(s, true);
+            }catch(Exception e){
+                throw new RuntimeException(e);
+            }
+        });
+        await.each(Threads::await);
         all.sort();
 
         if(shadowBuffer == null){
@@ -140,8 +155,6 @@ public class Schematics implements Loadable{
 
         try{
             Schematic s = read(file);
-            all.add(s);
-            checkLoadout(s, true);
 
             //external file from workshop
             if(!s.file.parent().equals(schematicDirectory)){
@@ -603,7 +616,7 @@ public class Schematics implements Loadable{
             for(int i = 0; i < total; i++){
                 Block block = blocks.get(stream.readByte());
                 int position = stream.readInt();
-                Object config = ver == 0 ? mapConfig(block, stream.readInt(), position) : TypeIO.readObject(Reads.get(stream));
+                Object config = ver == 0 ? mapConfig(block, stream.readInt(), position) : TypeIO.readObject(new Reads(stream));
                 byte rotation = stream.readByte();
                 if(block != Blocks.air){
                     tiles.add(new Stile(block, Point2.x(position), Point2.y(position), config, rotation));
