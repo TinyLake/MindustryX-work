@@ -61,10 +61,24 @@ public class Fonts{
     }
 
     public static void loadFonts(){
+        loadDefaultFont();
         largeIcons.clear();
         FreeTypeFontParameter param = fontParameter();
 
         Core.assets.load("default", Font.class, new FreeTypeFontLoaderParameter(mainFont, param)).loaded = f -> Fonts.def = f;
+
+        Core.assets.load("outline", Font.class, new FreeTypeFontLoaderParameter(mainFont, new FreeTypeFontParameter(){{
+            borderColor = Color.darkGray;
+            incremental = true;
+            size = 18;
+        }})).loaded = t -> Fonts.outline = t;
+
+        Core.assets.load("tech", Font.class, new FreeTypeFontLoaderParameter("fonts/tech.ttf", new FreeTypeFontParameter(){{
+            size = 18;
+        }})).loaded = f -> {
+            Fonts.tech = f;
+            Fonts.tech.getData().down *= 1.5f;
+        };
 
         Core.assets.load("icon", Font.class, new FreeTypeFontLoaderParameter("fonts/icon.ttf", new FreeTypeFontParameter(){{
             size = 30;
@@ -87,6 +101,8 @@ public class Fonts{
             //ASCII only
             characters = "\0ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890\"!`?'.,;:()[]{}<>|/@\\^$€-%+=#_&~*";
         }})).loaded = f -> Fonts.logic = f;
+
+        Core.assets.loadRun("mergeUI", PixmapPacker.class, () -> {}, () -> Fonts.mergeFontAtlas(Core.atlas));
     }
 
     public static @Nullable String unicodeToName(int unicode){
@@ -209,20 +225,6 @@ public class Fonts{
             }
         });
 
-        FreeTypeFontParameter param = new FreeTypeFontParameter(){{
-            borderColor = Color.darkGray;
-            incremental = true;
-            size = 18;
-        }};
-
-        Core.assets.load("outline", Font.class, new FreeTypeFontLoaderParameter(mainFont, param)).loaded = t -> Fonts.outline = t;
-
-        Core.assets.load("tech", Font.class, new FreeTypeFontLoaderParameter("fonts/tech.ttf", new FreeTypeFontParameter(){{
-            size = 18;
-        }})).loaded = f -> {
-            Fonts.tech = f;
-            Fonts.tech.getData().down *= 1.5f;
-        };
     }
 
     /** Merges the UI and font atlas together for better performance. */

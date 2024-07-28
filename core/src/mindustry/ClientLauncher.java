@@ -149,10 +149,8 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
 
         assets.load(new Vars());
 
-        Fonts.loadDefaultFont();
-
         //load fallback atlas if max texture size is below 4096
-        assets.load(new AssetDescriptor<>(maxTextureSize >= 4096 ? "sprites/sprites.aatls" : "sprites/fallback/sprites.aatls", TextureAtlas.class)).loaded = t -> atlas = t;
+        assets.load(maxTextureSize >= 4096 ? "sprites/sprites.aatls" : "sprites/fallback/sprites.aatls", TextureAtlas.class).loaded = t -> atlas = t;
         assets.loadRun("maps", Map.class, () -> maps.loadPreviews());
 
         Musics.load();
@@ -167,11 +165,11 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
         });
 
         assets.load(mods);
-        assets.loadRun("mergeUI", PixmapPacker.class, () -> {}, () -> Fonts.mergeFontAtlas(atlas));
 
         add(logic = new Logic());
         add(control = new Control());
         add(renderer = new Renderer());
+        Fonts.loadFonts();
         add(ui = new UI());
         add(netServer = new NetServer());
         add(netClient = new NetClient());
