@@ -21,8 +21,9 @@ import mindustry.world.blocks.logic.MessageBlock.*;
 import mindustry.world.blocks.production.Drill.*;
 import mindustry.world.blocks.storage.*;
 import mindustry.world.blocks.units.*;
+import mindustryX.features.draw.*;
 
-import static mindustry.Vars.tilesize;
+import static mindustry.Vars.*;
 
 public class RenderExt{
     public static boolean bulletShow, showMineBeam, displayAllMessage;
@@ -39,6 +40,7 @@ public class RenderExt{
     public static int massDriverLineInterval;
     public static boolean drawBars, drawBarsMend;
     public static float healthBarMinHealth;
+    public static boolean payloadPreview;
 
     public static boolean unitHide = false;
     public static Color massDriverLineColor = Color.clear;
@@ -78,13 +80,14 @@ public class RenderExt{
             drawBars = Core.settings.getBool("blockBars");
             drawBarsMend = Core.settings.getBool("blockBars_mend");
             healthBarMinHealth = Core.settings.getInt("blockbarminhealth");
+            payloadPreview = Core.settings.getBool("payloadpreview");
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);
     }
 
     private static void draw(){
-
+        if(RenderExt.payloadPreview) PayloadDropHint.draw(player);
     }
 
     public static void onGroupDraw(Drawc t){
