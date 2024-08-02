@@ -13,6 +13,7 @@ import arc.util.*;
 import mindustry.gen.*;
 import mindustry.input.*;
 import mindustry.ui.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -82,7 +83,7 @@ public class MinimapFragment{
 
             @Override
             public void pan(InputEvent event, float x, float y, float deltaX, float deltaY){
-                if(event.keyCode != KeyCode.mouseRight){
+                if(event.keyCode !=(LogicExt.invertMapClick ? KeyCode.mouseLeft : KeyCode.mouseRight)){
                     panx += deltaX / zoom;
                     pany += deltaY / zoom;
                 }else{
@@ -93,7 +94,7 @@ public class MinimapFragment{
             @Override
             public void touchDown(InputEvent event, float x, float y, int pointer, KeyCode button){
                 super.touchDown(event, x, y, pointer, button);
-                if(button == KeyCode.mouseRight){
+                if(button == (LogicExt.invertMapClick ? KeyCode.mouseLeft : KeyCode.mouseRight)){
                     panTo(x, y);
                 }
             }

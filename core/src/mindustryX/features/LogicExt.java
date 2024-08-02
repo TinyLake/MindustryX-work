@@ -8,6 +8,7 @@ public class LogicExt{
     public static boolean limitUpdate = false;
     public static int limitDst = 0, limitTimer = 10;
     public static boolean terrainSchematic = false;
+    public static boolean invertMapClick = false;
 
     public static void init(){
         Events.run(Trigger.update, () -> {
@@ -18,6 +19,7 @@ public class LogicExt{
                 limitTimer = 10;
             }
             terrainSchematic = Core.settings.getBool("terrainSchematic");
+            invertMapClick = Core.settings.getBool("invertMapClick");
         });
     }
 }

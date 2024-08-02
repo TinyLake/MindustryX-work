@@ -9,11 +9,13 @@ import arc.scene.event.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import mindustry.gen.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
 public class Minimap extends Table{
     private final Cell<?> mapCell;
+    private ClickListener listener,listener2;
 
     public Minimap(){
         background(Tex.pane);
@@ -22,7 +24,7 @@ public class Minimap extends Table{
 
         mapCell = add(new Element(){
             {
-                addListener(new ClickListener(KeyCode.mouseRight){
+                addListener(listener = new ClickListener(KeyCode.mouseRight){
                     @Override
                     public void clicked(InputEvent event, float cx, float cy){
                         var region = renderer.minimap.getRegion();
@@ -45,6 +47,8 @@ public class Minimap extends Table{
                 mapCell.size(size);
                 setSize(Scl.scl(size));
                 setPosition(Scl.scl(margin), Scl.scl(margin));
+                listener.setButton(LogicExt.invertMapClick ? KeyCode.mouseLeft : KeyCode.mouseRight);
+                listener2.setButton(LogicExt.invertMapClick ? KeyCode.mouseRight : KeyCode.mouseLeft);
 
                 super.act(delta);
             }
@@ -81,7 +85,7 @@ public class Minimap extends Table{
             }
         });
 
-        addListener(new ClickListener(){
+        addListener(listener2 = new ClickListener(){
             {
                 tapSquareSize = Scl.scl(11f);
             }
