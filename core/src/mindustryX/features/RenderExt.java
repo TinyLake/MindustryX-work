@@ -41,6 +41,7 @@ public class RenderExt{
     public static boolean drawBars, drawBarsMend;
     public static float healthBarMinHealth;
     public static boolean payloadPreview;
+    public static boolean deadOverlay;
 
     public static boolean unitHide = false;
     public static Color massDriverLineColor = Color.clear;
@@ -81,6 +82,7 @@ public class RenderExt{
             drawBarsMend = Core.settings.getBool("blockBars_mend");
             healthBarMinHealth = Core.settings.getInt("blockbarminhealth");
             payloadPreview = Core.settings.getBool("payloadpreview");
+            deadOverlay = Core.settings.getBool("deadOverlay");
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);

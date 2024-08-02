@@ -71,7 +71,7 @@ public class OverlayRenderer{
     public void drawBottom(){
         InputHandler input = control.input;
 
-        if(player.dead()) return;
+        if(player.dead() && !RenderExt.deadOverlay) return;
 
         if(player.isBuilder()){
             player.unit().drawBuildPlans();
@@ -113,7 +113,7 @@ public class OverlayRenderer{
             }
         }
 
-        if(player.dead()) return; //dead players don't draw
+        if(player.dead() && !RenderExt.deadOverlay) return; //dead players don't draw
 
         InputHandler input = control.input;
 
