@@ -146,7 +146,7 @@ project(":core"){
         api "org.lz4:lz4-java:1.8.0"
         api arcModule("arc-core")
         api arcModule("extensions:flabel")
-        api arcModule("extensions:freetype")
+        api "com.github.way-zer.Arc:freetype:fe9f23ae08"
         api arcModule("extensions:g3d")
         api arcModule("extensions:fx")
         api arcModule("extensions:arcnet")

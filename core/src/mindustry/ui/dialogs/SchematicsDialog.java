@@ -676,6 +676,7 @@ public class SchematicsDialog extends BaseDialog{
     }
 
     public static class SchematicImage extends Image{
+        private static boolean setLock = false;
         public float scaling = 16f;
         public float thickness = 4f;
         public Color borderColor = Pal.gray;
@@ -701,7 +702,8 @@ public class SchematicsDialog extends BaseDialog{
                 && ((Button)parent.parent).isOver();
 
             boolean wasSet = set;
-            if(!set){
+            if(!set && !setLock){
+                setLock = true;
                 Core.app.post(this::setPreview);
                 set = true;
             }else if(lastTexture != null && lastTexture.isDisposed()){
@@ -732,6 +734,7 @@ public class SchematicsDialog extends BaseDialog{
         }
 
         private void setPreview(){
+            setLock = false;
             TextureRegionDrawable draw = new TextureRegionDrawable(new TextureRegion(lastTexture = schematics.getPreview(schematic)));
             setDrawable(draw);
             setScaling(Scaling.fit);
