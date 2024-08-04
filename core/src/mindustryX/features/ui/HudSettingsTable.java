@@ -75,8 +75,8 @@ public class HudSettingsTable extends ToolTableBase{
                 ui.announce("已移除逻辑视角锁定");
             }).checked(a -> Core.settings.getBool("removeLogicLock")).size(30, 30).tooltip("逻辑锁定");
             t.button("[cyan]雾", Styles.flatTogglet, () -> {
-                if(!state.rules.pvp || player.team().id == 255) renderer.fogEnabled = !renderer.fogEnabled;
-            }).checked(a -> renderer.fogEnabled).size(30, 30).tooltip("战争迷雾").visible(() -> !state.rules.pvp || player.team().id == 255);
+                state.rules.fog ^= true;
+            }).checked(a -> state.rules.fog).size(30, 30).tooltip("战争迷雾").disabled((_t) -> state.rules.pvp && player.team().id != 255);
         }).left().row();
         cont.table(t -> {
             t.button("[red]灯", Styles.flatTogglet, () -> Settings.toggle("drawlight"))
