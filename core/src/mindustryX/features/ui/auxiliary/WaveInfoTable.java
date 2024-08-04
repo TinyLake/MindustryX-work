@@ -1,7 +1,6 @@
 package mindustryX.features.ui.auxiliary;
 
 import arc.*;
-import arc.scene.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
@@ -16,16 +15,12 @@ import mindustry.ui.dialogs.*;
 import mindustryX.features.*;
 import mindustryX.features.ui.*;
 
-import static mindustry.Vars.state;
+import static mindustry.Vars.*;
 
 public class WaveInfoTable extends AuxiliaryTools.Table{
     public static final float fontScl = 0.8f;
-
     private int waveOffset = 0;
-
     private final Table waveInfo;
-
-    private final ArcWaveInfoDialog waveInfoDialog = new ArcWaveInfoDialog();
 
     public WaveInfoTable(){
         super(Icon.waves);
@@ -37,14 +32,9 @@ public class WaveInfoTable extends AuxiliaryTools.Table{
 
         Events.on(WaveEvent.class, e -> rebuildWaveInfo());
 
-        waveInfo = new Table(Tex.pane);
-    }
-
-    @Override
-    protected void setup(){
         left().top();
-        waveInfo.left().top();
 
+        ArcWaveInfoDialog waveInfoDialog = new ArcWaveInfoDialog();
         button(Icon.waves, RStyles.clearAccentNonei, waveInfoDialog::show).size(40).tooltip("波次信息");
 
         table(buttons -> {
@@ -67,11 +57,8 @@ public class WaveInfoTable extends AuxiliaryTools.Table{
         }).left().row();
 
         table(setWave -> {
-            setWave.label(() -> "" + getDisplayWaves()).get().setFontScale(fontScl);
-
-            setWave.row();
-
-            setWave.button(Icon.settingsSmall, RStyles.clearAccentNonei, 30, () -> {
+            setWave.label(() -> "" + getDisplayWaves()).fontScale(fontScl).row();
+            setWave.button(Icon.settingsSmall, RStyles.clearAccentNonei, iconMed, () -> {
                 Dialog lsSet = new BaseDialog("波次设定");
                 lsSet.cont.add("设定查询波次").padRight(5f).left();
                 TextField field = lsSet.cont.field(state.wave + waveOffset + "", text -> waveOffset = Integer.parseInt(text) - state.wave).size(320f, 54f).valid(Strings::canParsePositiveInt).maxTextLength(100).get();
@@ -84,16 +71,24 @@ public class WaveInfoTable extends AuxiliaryTools.Table{
                 lsSet.show();
             });
         });
-
-        pane(Styles.noBarPane, waveInfo).scrollY(false).pad(8f).maxWidth(180f).left().update(pane -> {
-            // 自动失焦
-            if(pane.hasScroll()){
-                Element result = Core.scene.hit(Core.input.mouseX(), Core.input.mouseY(), true);
-                if(result == null || !result.isDescendantOf(pane)){
-                    Core.scene.setScrollFocus(null);
-                }
+        waveInfo = new Table(Tex.pane).left().top();
+        add(new ScrollPane(waveInfo, Styles.noBarPane){
+            {
+                setScrollingDisabledY(true);
+                setForceScroll(true, false);
+                // 自动失焦
+                update(() -> {
+                    if(hasScroll() && !hasMouse()){
+                        Core.scene.setScrollFocus(null);
+                    }
+                });
             }
-        });
+
+            @Override
+            public float getPrefWidth(){
+                return 0f;
+            }
+        }).growX();
     }
 
     private void rebuildWaveInfo(){
@@ -109,16 +104,14 @@ public class WaveInfoTable extends AuxiliaryTools.Table{
             StatusEffect effect = group.effect;
 
             waveInfo.table(groupT -> {
-                groupT.image(group.type.uiIcon).scaling(Scaling.fit).size(20).row();
-
+                groupT.image(group.type.uiIcon).scaling(Scaling.fit).size(iconSmall).row();
                 groupT.add("" + amount, fontScl).row();
-
                 groupT.add((shield > 0 ? UI.formatAmount((long)shield) : ""), fontScl).row();
 
                 if(effect != null && effect != StatusEffects.none){
-                    groupT.image(effect.uiIcon).size(20);
+                    groupT.image(effect.uiIcon).size(iconSmall);
                 }
-            }).pad(8).left().top();
+            }).pad(4).left().top();
         }
     }
 

@@ -7,16 +7,16 @@ import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import mindustry.ai.types.*;
-import mindustry.ui.*;
-import mindustryX.features.ui.*;
-import mindustryX.features.ui.auxiliary.ai.*;
 import mindustry.content.*;
 import mindustry.entities.units.*;
 import mindustry.game.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
 import mindustry.world.*;
+import mindustryX.features.ui.*;
+import mindustryX.features.ui.auxiliary.ai.*;
 
 import static mindustry.Vars.*;
 
@@ -32,10 +32,7 @@ public class AITools extends AuxiliaryTools.Table{
                 selectAI.updateUnit();
             }
         });
-    }
 
-    @Override
-    public void setup(){
         button(Icon.settingsSmall, RStyles.clearLineNoneTogglei, 30, this::showSettingDialog);
 
         if(false) aiButton(new ATRIAI(), Blocks.worldProcessor.region, "ATRI AI");
@@ -46,12 +43,10 @@ public class AITools extends AuxiliaryTools.Table{
     }
 
     private void aiButton(AIController ai, TextureRegion textureRegion, String describe){
-        button(new TextureRegionDrawable(textureRegion), RStyles.clearLineNoneTogglei, 30, () -> selectAI(ai))
-        .checked(b -> selectAI == ai).size(40).tooltip(describe);
-    }
-
-    private void selectAI(AIController ai){
-        selectAI = selectAI == ai ? null : ai;
+        button(new TextureRegionDrawable(textureRegion), RStyles.clearLineNoneTogglei, 30, () -> {
+            if(selectAI != null) selectAI = null;
+            else selectAI = ai;
+        }).checked(b -> selectAI == ai).size(40).tooltip(describe);
     }
 
     private void showSettingDialog(){
@@ -94,9 +89,7 @@ public class AITools extends AuxiliaryTools.Table{
                 }).row();
 
             }).growX();
-        }).growX();
-
-        dialog.cont.row();
+        }).growX().row();
 
         dialog.cont.table(t -> {
             t.add("builderAI").color(Pal.accent).pad(cols / 2f).center().row();

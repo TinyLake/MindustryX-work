@@ -110,16 +110,8 @@ public class ArcMinerAI extends AIController{
 
             moveTo(targetCore, core.hitSize());
             if(unit.within(targetCore, itemTransferRange) && targetCore.acceptItem(null, targetItem)){
-                if(control.input instanceof DesktopInput di){
-                    di.autoAim = true;
-                }
-                unit.aimX = core.x;
-                unit.aimY = core.y;
                 Call.transferInventory(player, core);
                 targetItem = updateTargetItem(core2 != null);
-                if(control.input instanceof DesktopInput di){
-                    Time.run(30f, () -> di.autoAim = false);
-                }
             }
         }
     }

@@ -4,10 +4,10 @@ import arc.*;
 import arc.input.*;
 import arc.scene.*;
 import arc.scene.event.*;
-import mindustryX.features.ui.AuxiliaryTools.*;
 import mindustry.gen.*;
 import mindustry.ui.fragments.*;
 import mindustryX.features.*;
+import mindustryX.features.ui.AuxiliaryTools.*;
 
 import static mindustry.Vars.*;
 
@@ -17,6 +17,7 @@ public class MarkTable extends Table{
     public MarkTable(){
         super(Icon.effect);
 
+        mobileHitter.fillParent = true;
         mobileHitter.addListener(new ElementGestureListener(20, 0.4f, MarkerType.heatTime / 60f, 0.15f){
             @Override
             public boolean longPress(Element actor, float x, float y){
@@ -32,11 +33,6 @@ public class MarkTable extends Table{
             }
         });
 
-        mobileHitter.fillParent = true;
-    }
-
-    @Override
-    protected void setup(){
         if(mobile){
             button("♐ >", RStyles.clearLineNonet, () -> {
                 ui.hudGroup.addChild(mobileHitter);

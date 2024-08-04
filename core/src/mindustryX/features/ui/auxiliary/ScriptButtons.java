@@ -16,36 +16,25 @@ import mindustryX.features.ui.*;
 import static mindustry.Vars.*;
 
 public class ScriptButtons extends AuxiliaryTools.Table{
-
     public ScriptButtons(){
         super(UnitTypes.gamma.uiIcon);
-    }
-
-    @Override
-    protected void setup(){
         defaults().size(40);
 
         scriptButton(Blocks.buildTower.uiIcon, "在建造列表加入被摧毁建筑", () -> player.buildDestroyedBlocks());
-
         scriptButton(Blocks.message.uiIcon, "锁定上个标记点", MarkerType::lockOnLastMark);
-
         scriptButton(Items.copper.uiIcon, "一键放置", () -> player.dropItems());
-
         scriptButton(Icon.pencilSmall, "特效显示", () -> EffectsDialog.withAllEffects().show());
-
-        addSettingButton(Icon.modeAttack, "autotarget", "自动攻击", s -> {
-        });
-
-        addSettingButton(UnitTypes.vela.uiIcon, "forceBoost", "强制助推", s -> {
-        });
-
-        if(!mobile){
-            addSettingButton(Icon.eyeSmall, "removePan", "视角脱离玩家", s -> {
+        addSettingButton(Icon.modeAttack, "autotarget", "自动攻击", null);
+        addSettingButton(UnitTypes.vela.uiIcon, "forceBoost", "强制助推", null);
+        addSettingButton(Icon.eyeSmall, "viewMode", "视角脱离玩家", s -> {
+            if(s){
                 if(control.input instanceof DesktopInput desktopInput){
                     desktopInput.panning = true;
                 }
-            });
-        }
+            }else{
+                Core.camera.position.set(player);
+            }
+        });
     }
 
     protected void addSettingButton(TextureRegion region, String settingName, String description, Boolc onClick){
@@ -59,16 +48,16 @@ public class ScriptButtons extends AuxiliaryTools.Table{
             Core.settings.put(settingName, !setting);
             UIExt.announce("已" + (setting ? "取消" : "开启") + description);
 
-            onClick.get(!setting);
+            if(onClick != null) onClick.get(!setting);
         }).checked(b -> Core.settings.getBool(settingName));
     }
 
-    protected Cell<ImageButton> scriptButton(TextureRegion region, String description, Runnable runnable){
-        return scriptButton(new TextureRegionDrawable(region), description, runnable);
+    protected void scriptButton(TextureRegion region, String description, Runnable runnable){
+        scriptButton(new TextureRegionDrawable(region), description, runnable);
     }
 
     protected Cell<ImageButton> scriptButton(Drawable icon, String description, Runnable runnable){
-        return button(icon, RStyles.clearLineNonei, 30, runnable).tooltip(description);//TODO allowMobile
+        return button(icon, RStyles.clearLineNonei, iconMed, runnable).tooltip(description, true);
     }
 
 }

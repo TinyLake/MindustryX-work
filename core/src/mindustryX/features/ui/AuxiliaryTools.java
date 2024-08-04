@@ -10,6 +10,10 @@ import mindustry.ui.*;
 import mindustryX.features.ui.auxiliary.*;
 
 public class AuxiliaryTools extends Table{
+    static{
+        RStyles.load();
+    }
+
     private boolean shown = true;
     private final Seq<Table> toolsTables = Seq.with(
     new MapInfoTable(),
@@ -20,22 +24,11 @@ public class AuxiliaryTools extends Table{
     new MarkTable()
     );
 
-    static{
-        RStyles.load();
-    }
-
     public AuxiliaryTools(){
-        setup();
-
-        rebuild();
+        name = "AuxiliaryTable";
         Events.on(WorldLoadEvent.class, e -> rebuild());
         Events.on(ResetEvent.class, e -> clearChildren());
-    }
-
-    public void setup(){
-        for(Table table : toolsTables){
-            table.setup();
-        }
+        rebuild();
     }
 
     public void toggle(){
@@ -46,31 +39,27 @@ public class AuxiliaryTools extends Table{
     private void rebuild(){
         clearChildren();
 
-        table(Styles.black3, buttons -> {
+        table(Styles.black5, buttons -> {
             buttons.button("[acid]辅助器", RStyles.clearLineNoneTogglet, this::toggle).size(80f, 40f).tooltip((shown ? "关闭" : "开启") + "辅助器");
 
-            if(shown){
-                for(Table table : toolsTables){
-                    table.addButton(buttons);
-                }
+            if(!shown) return;
+            for(Table table : toolsTables){
+                buttons.button(table.icon, RStyles.clearAccentNoneTogglei, 30, () -> table.shown ^= true)
+                .size(40).checked(b -> table.shown);
             }
-        }).fillX();
-
-        row();
-
-        if(shown){
-            table(RStyles.black1, body -> {
-                body.defaults().expandX().left();
-                for(Table table : toolsTables){
-                    table.margin(4);
-                    body.collapser(table, table::shown).row();
-                }
-            }).fillX().left();
-        }
+        }).fillX().row();
+        if(!shown) return;
+        table(Styles.black3, body -> {
+            body.defaults().expandX().left();
+            for(Table table : toolsTables){
+                table.margin(4);
+                body.collapser(table, () -> table.shown).growX().row();
+            }
+        }).fillX().left();
     }
 
     public abstract static class Table extends arc.scene.ui.layout.Table{
-        private boolean shown;
+        public boolean shown;
         protected Drawable icon;
 
         public Table(TextureRegion region){
@@ -79,21 +68,6 @@ public class AuxiliaryTools extends Table{
 
         public Table(Drawable icon){
             this.icon = icon;
-        }
-
-        public void addButton(arc.scene.ui.layout.Table buttons){
-            buttons.button(icon, RStyles.clearAccentNoneTogglei, 30, this::toggle)
-            .size(40).checked(b -> shown);
-        }
-
-        protected abstract void setup();
-
-        public boolean shown(){
-            return shown;
-        }
-
-        public boolean toggle(){
-            return shown = !shown;
         }
     }
 }
