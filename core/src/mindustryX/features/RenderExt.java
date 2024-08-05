@@ -3,6 +3,7 @@ package mindustryX.features;
 import arc.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
+import arc.graphics.g2d.TextureAtlas.*;
 import arc.math.*;
 import arc.math.geom.*;
 import arc.util.*;
@@ -94,6 +95,30 @@ public class RenderExt{
         });
         Events.run(Trigger.draw, RenderExt::draw);
         Events.on(TileChangeEvent.class, RenderExt::onSetBlock);
+
+        //Optimize white() for ui
+        AtlasRegion white = Core.atlas.white(),
+        whiteUI = Core.atlas.find("whiteui"),
+        whiteSet = new AtlasRegion(white){
+            @Override
+            public void set(TextureRegion region0){
+                super.set(region0);
+                if(region0 instanceof AtlasRegion region){
+                    name = region.name;
+                    offsetX = region.offsetX;
+                    offsetY = region.offsetY;
+                    packedWidth = region.packedWidth;
+                    packedHeight = region.packedHeight;
+                    originalWidth = region.originalWidth;
+                    originalHeight = region.originalHeight;
+                    rotate = region.rotate;
+                    splits = region.splits;
+                }
+            }
+        };
+        Reflect.set(TextureAtlas.class, Core.atlas, "white", whiteSet);
+        Events.run(Trigger.uiDrawBegin, () -> whiteSet.set(whiteUI));
+        Events.run(Trigger.uiDrawEnd, () -> whiteSet.set(white));
     }
 
     private static void draw(){
