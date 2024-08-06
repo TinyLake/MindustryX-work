@@ -28,7 +28,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
     private int unitCount = 1;
     private float unitRandDst = 1f;
     private final Vec2 unitLoc = new Vec2(0, 0);
-    private final Unit spawnUnit = UnitTypes.emanate.create(Team.sharded);
+    private Unit spawnUnit = UnitTypes.emanate.create(Team.sharded);
     private final OrderedSet<StatusEntry> unitStatus = new OrderedSet<>();
     private final float[] statusTime = {10, 30f, 60f, 120f, 180f, 300f, 600f, 900f, 1200f, 1500f, 1800f, 2700f, 3600f, Float.MAX_VALUE};
     private float chatTime = 0;
@@ -59,12 +59,10 @@ public class ArcUnitFactoryDialog extends BaseDialog{
             r.add("数量：");
             r.field("" + unitCount, text -> unitCount = Integer.parseInt(text))
             .valid(Strings::canParsePositiveInt).maxTextLength(4);
-        }).row();
 
-        cont.table((r) -> {
             r.add("生成范围：");
             r.field(Strings.autoFixed(unitRandDst, 3), text -> unitRandDst = Float.parseFloat(text))
-            .valid(Strings::canParsePositiveFloat).tooltip("在目标点附近的这个范围内随机生成").maxTextLength(8);
+            .valid(Strings::canParsePositiveFloat).maxTextLength(8).tooltip("在目标点附近的这个范围内随机生成");
             r.add("格");
         }).row();
 
@@ -79,10 +77,8 @@ public class ArcUnitFactoryDialog extends BaseDialog{
             Vec2 pos = Tmp.v1.set(unitLoc).scl(tilesize);
             for(var n = 0; n < unitCount; n++){
                 Tmp.v2.rnd(Mathf.random(unitRandDst * tilesize));
-                Unit unit = cloneUnit(spawnUnit);
-                if(elevation) unit.elevation = 1f;
+                Unit unit = createUnit();
                 unit.set(Tmp.v2.add(pos));
-                UnitExt.getStatuses(unit).addAll(unitStatus);
                 unit.add();
             }
             control.input.panCamera(pos);
@@ -96,14 +92,8 @@ public class ArcUnitFactoryDialog extends BaseDialog{
             chatTime = 1f;
             ui.showInfoFade("已生成单个单位。\n[gray]请不要短时多次使用本功能，否则容易因ddos被服务器ban", 5f);
             Tmp.v1.rnd(Mathf.random(unitRandDst)).add(unitLoc.x, unitLoc.y).scl(tilesize);
-            sendFormatChat("/js u = UnitTypes.@.create(Team.get(@))",
-            spawnUnit.type.name,
-            spawnUnit.team.id
-            );
-            sendFormatChat("/js u.set(@,@)",
-            unitLoc.x * tilesize,
-            unitLoc.y * tilesize
-            );
+            sendFormatChat("/js u = UnitTypes.@.create(Team.get(@))", spawnUnit.type.name, spawnUnit.team.id);
+            sendFormatChat("/js u.set(@,@)", unitLoc.x * tilesize, unitLoc.y * tilesize);
             if(spawnUnit.health != spawnUnit.type.health){
                 sendFormatChat("/js u.health = @", spawnUnit.health);
                 if(spawnUnit.health > spawnUnit.type.health){
@@ -142,21 +132,19 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                 t.add("加工单位：");
                 t.image(spawnUnit.type.uiIcon).scaling(Scaling.fit).size(iconMed);
             }).grow();
-        }, Styles.togglet, () -> showUnitSelect = !showUnitSelect).fillX().minWidth(400f).row();
+        }, Styles.togglet, () -> showUnitSelect = !showUnitSelect).growX().minWidth(400f).row();
         table.collapser(list -> {
             int i = 0;
-            for(UnitType unit : content.units()){
+            for(UnitType type : content.units()){
                 if(i++ % 8 == 0) list.row();
-                list.button((b) -> {
-                    b.image(unit.uiIcon).scaling(Scaling.fit);
-                }, cleart, () -> {
-                    if(spawnUnit.type != unit){
-                        changeUnitType(spawnUnit, unit);
+                list.button((b) -> b.image(type.uiIcon).scaling(Scaling.fit), cleart, () -> {
+                    if(spawnUnit.type != type){
+                        spawnUnit = type.create(spawnUnit.team);
                         buildUnitFabricator(table);
                     }
                     showUnitSelect = !showUnitSelect;
                     buildUnitFabricator(table);
-                }).tooltip(unit.localizedName).width(50f).height(50f);
+                }).tooltip(type.localizedName).width(50f).height(50f);
             }
         }, () -> showUnitSelect).row();
 
@@ -213,19 +201,20 @@ public class ArcUnitFactoryDialog extends BaseDialog{
 
             t.row();
 
-            float[] status = {1f, 1f, 1f, 1f};
-            unitStatus.each(s -> {
-                status[0] *= s.effect.healthMultiplier;
-                status[1] *= s.effect.damageMultiplier;
-                status[2] *= s.effect.reloadMultiplier;
-                status[3] *= s.effect.speedMultiplier;
-            });
             t.table(tt -> {
+                tt.defaults().pad(0, 8, 0, 8);
                 tt.add("[acid]血量");
                 tt.add("[red]伤害");
                 tt.add("[violet]攻速");
                 tt.add("[cyan]移速");
                 tt.row();
+                float[] status = {1f, 1f, 1f, 1f};
+                unitStatus.each(s -> {
+                    status[0] *= s.effect.healthMultiplier;
+                    status[1] *= s.effect.damageMultiplier;
+                    status[2] *= s.effect.reloadMultiplier;
+                    status[3] *= s.effect.speedMultiplier;
+                });
                 tt.add(FormatDefault.format(status[0]));
                 tt.add(FormatDefault.format(status[1]));
                 tt.add(FormatDefault.format(status[2]));
@@ -242,17 +231,14 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                         list.add("<瞬间状态>");
                     }else{
                         list.table(et -> {
-                            TextField sField = et.field(checkInf(entry.time), text -> entry.time = Objects.equals(text, "Inf") ? Float.MAX_VALUE : Float.parseFloat(text)).valid(text -> Objects.equals(text, "Inf") || Strings.canParsePositiveFloat(text)).tooltip("buff持续时间(单位：秒)").maxTextLength(10).get();
-
+                            TextField sField = et.field(checkInf(entry.time), text -> entry.time = Objects.equals(text, "Inf") ? Float.MAX_VALUE : Float.parseFloat(text))
+                            .valid(text -> Objects.equals(text, "Inf") || Strings.canParsePositiveFloat(text)).tooltip("buff持续时间(单位：秒)").maxTextLength(10).get();
                             et.add("秒");
 
                             Slider sSlider = et.slider(0f, statusTime.length - 1f, 1f, statusTimeIndex(entry.time), n -> {
-                                if(statusTimeIndex(entry.time) != n){
-                                    sField.setText(checkInf(statusTime[(int)n]));
-                                }
-                                entry.time = statusTime[(int)n];
+                                if(statusTimeIndex(entry.time) == n) return;
+                                sField.setText(checkInf(entry.time = statusTime[(int)n]));
                             }).get();
-
                             sField.update(() -> sSlider.setValue(statusTimeIndex(entry.time)));
                         });
                     }
@@ -287,7 +273,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                         }
                         buildUnitFabricator(table);
                     }).size(50f).left().tooltip(item.localizedName);
-                    if(++i % 6 == 0) ptt.row();
+                    if(++i % 8 == 0) ptt.row();
                 }
             });
             if(spawnUnit.stack.amount > 0){
@@ -305,7 +291,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                         spawnUnit.stack.amount = spawnUnit.type.itemCapacity;
                         buildUnitFabricator(table);
                     }).tooltip("设置物品数量为单位最大容量");
-                    ptt.button(Icon.down, cleari, () -> {
+                    ptt.button(Icon.cancel, cleari, () -> {
                         spawnUnit.stack.amount = 0;
                         buildUnitFabricator(table);
                     }).tooltip("清空单位物品");
@@ -324,6 +310,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                 }).grow();
             }, Styles.togglet, () -> showPayload = !showPayload).fillX().checked(showPayload).row();
             table.collapser(p -> {
+                p.defaults().growX().padLeft(32).padRight(32);
                 p.table(pt -> pay.payloads().each(payload -> {
                     if(payload instanceof Payloadc payloadUnit){
                         pt.button(b -> b.image(payload.content().uiIcon).scaling(Scaling.fit).size(iconMed).getTable().add("[red]*"), squareTogglet, () -> {
@@ -339,7 +326,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                     if(pay.payloads().indexOf(payload) % 8 == 7) pt.row();
                 })).row();
 
-                p.button("载入单位 " + UnitTypes.mono.emoji(), showSelectPayload ? Icon.upOpen : Icon.downOpen, Styles.togglet, () -> showSelectPayload = !showSelectPayload).width(300f).row();
+                p.button("载入单位 " + UnitTypes.mono.emoji(), showSelectPayload ? Icon.upOpen : Icon.downOpen, Styles.togglet, () -> showSelectPayload = !showSelectPayload).row();
                 p.collapser((c) -> {
                     c.table(list -> {
                         int i = 0;
@@ -354,7 +341,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                     c.row();
                     c.table(pt -> {
                         pt.button("[cyan]自递归", () -> {
-                            pay.pickup(cloneUnit(spawnUnit));
+                            pay.pickup(createUnit());
                             buildUnitFabricator(table);
                         }).width(200f);
                         pt.button("?", () -> ui.showInfo("""
@@ -366,7 +353,7 @@ public class ArcUnitFactoryDialog extends BaseDialog{
                     }).row();
                 }, () -> showSelectPayload).row();
 
-                p.button("载入建筑 " + Blocks.surgeWallLarge.emoji(), showPayloadBlock ? Icon.upOpen : Icon.downOpen, Styles.togglet, () -> showPayloadBlock = !showPayloadBlock).width(300f).row();
+                p.button("载入建筑 " + Blocks.surgeWallLarge.emoji(), showPayloadBlock ? Icon.upOpen : Icon.downOpen, Styles.togglet, () -> showPayloadBlock = !showPayloadBlock).row();
                 p.collapser(list -> {
                     int i = 0;
                     for(Block payBlock : content.blocks()){
@@ -383,7 +370,9 @@ public class ArcUnitFactoryDialog extends BaseDialog{
         }
 
         table.button("[red]重置出厂状态", () -> {
-            resetUnitType(spawnUnit, spawnUnit.type);
+            elevation = false;
+            spawnUnit = spawnUnit.type.create(spawnUnit.team);
+            unitStatus.clear();
             buildUnitFabricator(table);
         }).fillX().row();
         //table.add("[orange]单位加工车间。 [white]Made by [violet]Lucky Clover\n").width(400f);
@@ -405,8 +394,10 @@ public class ArcUnitFactoryDialog extends BaseDialog{
         return 0;
     }
 
-    private Unit cloneUnit(Unit unit){
+    private Unit createUnit(){
+        Unit unit = spawnUnit;
         Unit reUnit = unit.type.create(unit.team);
+        reUnit.afterRead();
         reUnit.health = unit.health;
         reUnit.shield = unit.shield;
         reUnit.stack = unit.stack.copy();
@@ -414,30 +405,14 @@ public class ArcUnitFactoryDialog extends BaseDialog{
         if(unit instanceof Payloadc pay && reUnit instanceof Payloadc rePay){
             pay.payloads().each(rePay::addPayload);
         }
+
+        if(elevation) reUnit.elevation = 1f;
+        var statuses = getStatuses(reUnit);
+        for(var it : unitStatus){
+            statuses.add(new StatusEntry().set(it.effect, it.time * 60f));
+        }
+
         return reUnit;
-    }
-
-
-    private void resetUnitType(Unit unit, UnitType unitType){
-        elevation = false;
-        unit.type = unitType;
-        unit.health = unitType.health;
-        unit.shield = 0;
-        unit.stack.amount = 0;
-        if(unit instanceof Payloadc pay){
-            pay.payloads().clear();
-        }
-        unitStatus.clear();
-    }
-
-    private void changeUnitType(Unit unit, UnitType unitType){
-        unit.type = unitType;
-        unit.health = unitType.health;
-        unit.shield = 0;
-        if(unit.stack.amount > unit.itemCapacity()){
-            unit.stack.amount = unit.itemCapacity();
-        }
-        unitStatus.clear();
     }
 
     private void sendFormatChat(String format, Object... args){
@@ -448,5 +423,18 @@ public class ArcUnitFactoryDialog extends BaseDialog{
         }
         Time.run(chatTime, () -> Call.sendChatMessage(Strings.format(format, args)));
         chatTime = chatTime + 10f;
+    }
+
+    public static Seq<StatusEntry> getStatuses(Unit unit){
+        Class<?> cls = unit.getClass();
+        if(cls.isAnonymousClass()) cls = cls.getSuperclass();
+        while(true){
+            try{
+                return Reflect.get(cls, unit, "statuses");
+            }catch(Exception e){
+                cls = cls.getSuperclass();
+                if(cls == Unit.class) return Seq.with();
+            }
+        }
     }
 }
