@@ -624,10 +624,10 @@ public class UnitType extends UnlockableContent implements Senseable{
             }
 
             if(unit instanceof Payloadc payload){
-                bars.add(new Bar(Strings.format("装载：@/@ @",
+                bars.add(new Bar(() -> Strings.format("装载：@/@ @",
                 Strings.autoFixed(payload.payloadUsed() / tilesize / tilesize, 4),
                 Strings.autoFixed(payloadCapacity / tilesize / tilesize, 4),
-                StatUnit.blocksSquared.localized()), Pal.items, () -> payload.payloadUsed() / unit.type().payloadCapacity));
+                StatUnit.blocksSquared.localized()), () -> Pal.items, () -> payload.payloadUsed() / unit.type().payloadCapacity));
                 bars.row();
 
                 var count = new float[]{-1};

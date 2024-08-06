@@ -491,7 +491,6 @@ public class PlacementFragment{
 
                 //commandTable: commanded units
                 {
-                    boolean arcExtra= Core.settings.getBool("arcCommandTable");
                     commandTable.touchable = Touchable.enabled;
                     commandTable.add(Core.bundle.get("commandmode.name")).fill().center().labelAlign(Align.center).row();
                     commandTable.image().color(Pal.accent).growX().pad(20f).padTop(0f).padBottom(4f).row();
@@ -506,6 +505,8 @@ public class PlacementFragment{
 
                         rebuildCommand = () -> {
                             u.clearChildren();
+
+                            boolean arcExtra = Core.settings.getBool("arcCommandTable");
                             var units = control.input.selectedUnits;
                             if(units.size > 0){
                                 int[] counts = new int[content.units().size];
@@ -599,27 +600,27 @@ public class PlacementFragment{
                                         }
                                     }).fillX().padTop(4f).left();
                                 }
-                                if(arcExtra && control.input.selectedUnits.size > 0){
+                                if(arcExtra && units.size > 0){
                                     u.row();
                                     u.table(sp -> {
                                         float wound = (float) Core.settings.getInt("rtsWoundUnit") / 100f;
-                                        if (control.input.selectedUnits.contains(unit -> unit.health >= unit.maxHealth * wound) && control.input.selectedUnits.contains(unit -> unit.health < unit.maxHealth * wound)){
+                                        if (units.contains(unit -> unit.health >= unit.maxHealth * wound) && units.contains(unit -> unit.health < unit.maxHealth * wound)){
                                             sp.table(spp->{
                                                 arcSelectUnits(spp,"[green]\uE813","高血量单位", unit -> unit.health >= unit.maxHealth * wound);
                                                 arcSelectUnits(spp,"[red]\uE80F","低血量单位", unit -> unit.health < unit.maxHealth * wound);
                                             });
                                         }
 
-                                        if (control.input.selectedUnits.contains(unit -> unit.type.commands.length > 1) && control.input.selectedUnits.contains(unit -> unit.type.commands.length <= 1)){
+                                        if (units.contains(unit -> unit.type.commands.length > 1) && units.contains(unit -> unit.type.commands.length <= 1)){
                                             sp.table(spp->{
                                                 arcSelectUnits(spp,"\uE86E","进攻性单位", unit -> unit.type.commands.length <= 1);
                                                 arcSelectUnits(spp,"\uE86B","辅助性单位", unit -> unit.type.commands.length > 1);
                                             });
                                         }
 
-                                        int hasFlyer = control.input.selectedUnits.contains(unit -> unit.isFlying()) ? 1 : 0;
-                                        int hasLand = control.input.selectedUnits.contains(unit -> !unit.isFlying() && !unit.type.naval) ? 1 : 0;
-                                        int hasNaval = control.input.selectedUnits.contains(unit -> unit.type.naval) ? 1 : 0;
+                                        int hasFlyer = units.contains(unit -> unit.isFlying()) ? 1 : 0;
+                                        int hasLand = units.contains(unit -> !unit.isFlying() && !unit.type.naval) ? 1 : 0;
+                                        int hasNaval = units.contains(unit -> unit.type.naval) ? 1 : 0;
                                         if (hasFlyer + hasLand + hasNaval >=2 ){
                                             sp.table(spp->{
                                                 if (hasFlyer == 1) arcSelectUnits(spp,UnitTypes.flare.emoji(),"飞行单位", unit -> unit.isFlying());
