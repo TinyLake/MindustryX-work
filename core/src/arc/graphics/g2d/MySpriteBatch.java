@@ -19,8 +19,8 @@ public class MySpriteBatch extends SpriteBatch{
 
     @Override
     protected void z(float z){
-        if(this.z == z) return;
         orderZ = 0;
+        if(this.z == z) return;
         super.z(z);
     }
 
