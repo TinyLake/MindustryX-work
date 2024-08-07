@@ -111,11 +111,15 @@ public class LogicBlock extends Block{
 
     @Override
     public boolean checkForceDark(Tile tile){
-        return !accessible();
+        return !accessibleRead();
     }
 
     public boolean accessible(){
-        return !privileged || state.rules.editor || state.playtestingMap != null;
+        return !privileged || state.rules.editor || state.playtestingMap != null || RenderExt.showOtherInfo && !net.client();
+    }
+
+    private boolean accessibleRead(){
+        return accessible() || RenderExt.showOtherInfo;
     }
 
     @Override
@@ -427,7 +431,7 @@ public class LogicBlock extends Block{
 
         @Override
         public boolean displayable(){
-            return accessible() || RenderExt.showOtherInfo;
+            return accessibleRead();
         }
 
         @Override
@@ -450,7 +454,7 @@ public class LogicBlock extends Block{
 
         @Override
         public Cursor getCursor(){
-            return !accessible() && !RenderExt.showOtherInfo ? SystemCursor.arrow : super.getCursor();
+            return !accessibleRead() ? SystemCursor.arrow : super.getCursor();
         }
 
         //logic blocks cause write problems when picked up
@@ -598,7 +602,7 @@ public class LogicBlock extends Block{
 
         @Override
         public void drawSelect(){
-            if(!accessible() && !RenderExt.showOtherInfo) return;
+            if(!accessibleRead()) return;
 
             Groups.unit.each(u -> u.controller() instanceof LogicAI ai && ai.controller == this, unit -> {
                 Drawf.square(unit.x, unit.y, unit.hitSize, unit.rotation + 45);
@@ -645,7 +649,7 @@ public class LogicBlock extends Block{
 
         @Override
         public boolean shouldShowConfigure(Player player){
-            return accessible() || RenderExt.showOtherInfo;
+            return accessibleRead();
         }
 
         @Override
@@ -653,14 +657,10 @@ public class LogicBlock extends Block{
             table.setBackground(Styles.black3);
             Table vars = new Table();
             table.table(t -> {
-                t.button(Icon.pencil, Styles.cleari, () -> showEditDialog(RenderExt.showOtherInfo)).size(40);
-                t.button(Icon.copy, Styles.cleari, () -> {
-                    Core.app.setClipboardText(code);
-                    UIExt.announce("已复制逻辑");
-                }).size(40);
-                t.button(Icon.download, Styles.cleari, () -> {
-                    updateCode(Core.app.getClipboardText().replace("\r\n", "\n"));
-                    UIExt.announce("已导入逻辑(仅单机生效)");
+                t.button(Icon.pencil, Styles.cleari, ()->{
+                    if(!accessible())
+                        UIExt.announce("[yellow]当前无权编辑，仅供查阅");
+                    showEditDialog();
                 }).size(40);
                 t.button(Icon.info, Styles.cleari, () -> {
                     showVars = !showVars;
