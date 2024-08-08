@@ -254,7 +254,7 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
             if(nextFrame > current){
                 long toSleep = nextFrame - current;
                 Threads.sleep(toSleep / 1000000, (int)(toSleep % 1000000));
-            }
+            }else nextFrame = current;
         }
     }
 
