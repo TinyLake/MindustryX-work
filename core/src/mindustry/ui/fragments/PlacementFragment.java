@@ -437,23 +437,29 @@ public class PlacementFragment{
                             //show hovered item, whatever that may be
                             hovered.display(topTable);
                             if(hovered2 != hovered && hovered2 != null){
-                                topTable.row();
+                                topTable.row().image().color(Pal.gray).height(2).growX().pad(8).row();
                                 hovered2.display(topTable);
-                            }}
+                            }
+                        }
 
                         //只要可行便绘制地板|建筑，移除了其他重复绘制
                         if (Core.settings.getBool("hoveredTileInfo") && hoveredTile != null) {
-                            topTable.row();
-                            topTable.row();
-                            topTable.table(t -> {
+                            topTable.row().table(t -> {
                                 t.left();
-                                t.add(new Image(hoverTile.floor().uiIcon)).size(20f).left();
-                                t.add(" " + hoverTile.floor().localizedName).left();
-                                if (hoverTile.block() != Blocks.air)
-                                    t.add(" | " + hoverTile.block().emoji() + (hoverTile.build != null ? "[#" + hoverTile.build.team.color + "]" : "") + hoverTile.block().localizedName).left();
-                                if (hoverTile.overlay() != Blocks.air)
-                                    t.add(" | " + hoverTile.overlay().emoji() + hoverTile.overlay().localizedName).left();
-                            }).growX().left();
+                                t.defaults().left();
+                                t.image(hoverTile.floor().uiIcon).size(iconSmall).padRight(4);
+                                t.add(hoverTile.floor().localizedName);
+                                if(hoverTile.block() != Blocks.air){
+                                    t.add(" | ");
+                                    t.image(hoverTile.block().uiIcon).size(iconSmall).padRight(4);
+                                    t.add(hoverTile.block().localizedName).color(hoverTile.team().color);
+                                }
+                                if(hoverTile.overlay() != Blocks.air){
+                                    t.add(" | ");
+                                    t.image(hoverTile.overlay().uiIcon).size(iconSmall).padRight(4);
+                                    t.add(hoverTile.overlay().localizedName);
+                                }
+                            }).padTop(8).left();
                         }
                     });
                 }).colspan(3).fillX().visible(this::hasInfoBox).touchable(Touchable.enabled).row();
@@ -618,14 +624,14 @@ public class PlacementFragment{
                                             });
                                         }
 
-                                        int hasFlyer = units.contains(unit -> unit.isFlying()) ? 1 : 0;
-                                        int hasLand = units.contains(unit -> !unit.isFlying() && !unit.type.naval) ? 1 : 0;
-                                        int hasNaval = units.contains(unit -> unit.type.naval) ? 1 : 0;
-                                        if (hasFlyer + hasLand + hasNaval >=2 ){
-                                            sp.table(spp->{
-                                                if (hasFlyer == 1) arcSelectUnits(spp,UnitTypes.flare.emoji(),"飞行单位", unit -> unit.isFlying());
-                                                if (hasLand == 1) arcSelectUnits(spp,UnitTypes.crawler.emoji(),"陆军单位", unit -> !unit.isFlying() && !unit.type.naval);
-                                                if (hasNaval == 1) arcSelectUnits(spp,UnitTypes.retusa.emoji(),"海军单位", unit -> unit.type.naval);
+                                        boolean hasFlyer = units.contains(Flyingc::isFlying),
+                                        hasLand = units.contains(unit -> !unit.isFlying() && !unit.type.naval),
+                                        hasNaval = units.contains(unit -> unit.type.naval);
+                                        if((hasFlyer ? 1 : 0) + (hasLand ? 1 : 0) + (hasNaval ? 1 : 0) >= 2){
+                                            sp.table(spp -> {
+                                                if(hasFlyer) arcSelectUnits(spp, UnitTypes.flare.emoji(), "飞行单位", Flyingc::isFlying);
+                                                if(hasLand) arcSelectUnits(spp, UnitTypes.crawler.emoji(), "陆军单位", unit -> !unit.isFlying() && !unit.type.naval);
+                                                if(hasNaval) arcSelectUnits(spp, UnitTypes.retusa.emoji(), "海军单位", unit -> unit.type.naval);
                                             });
                                         }
                                     }).fillX().padTop(4f).left();
@@ -828,18 +834,17 @@ public class PlacementFragment{
 
     boolean hasInfoBox(){
         hover = hovered();
-        hover2 = hoveredblock();
-        hoverTile = hoveredTile();
         return control.input.block != null || menuHoverBlock != null || hover != null || hoverTile != null;
     }
 
     /** Returns the thing being hovered over. */
     @Nullable
     Displayable hovered(){
-        Vec2 v = topTable.stageToLocalCoordinates(Core.input.mouse());
-
-        //if the mouse intersects the table or the UI has the mouse, no hovering can occur
-        if(Core.scene.hasMouse() || topTable.hit(v.x, v.y, false) != null) return null;
+        if(Core.scene.hasMouse() && !topTable.hasMouse()) return null;//MDTX: fix flashing. Note: when loading show, world is empty, and not use `Units`
+        //check tile being hovered over
+        Tile hoverTile = world.tileWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
+        this.hoverTile = (hoverTile != null && (hoverTile.build == null || !hoverTile.build.inFogTo(player.team()))) ? hoverTile : null;
+        this.hover2 = nextFlowBuild = (hoverTile!=null && hoverTile.build != null && hoverTile.build.displayable() && !hoverTile.build.inFogTo(player.team()))?hoverTile.build:null;
 
         //check for a unit
         Unit unit = Units.closestOverlap(player.team(), Core.input.mouseWorldX(), Core.input.mouseWorldY(), 5f, u -> true);
@@ -847,49 +852,8 @@ public class PlacementFragment{
         if(unit != null) return unit;
         unit = Units.closestEnemy(player.team(), Core.input.mouseWorldX(), Core.input.mouseWorldY(), 5f, u -> true);
         if(unit != null) return unit;
-        //check tile being hovered over
-        Tile hoverTile = world.tileWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
-        if(hoverTile != null){
-            //if the tile has a building, display it
-            if(hoverTile.build != null && hoverTile.build.displayable()  && !hoverTile.build.inFogTo(player.team())){
-                return nextFlowBuild = hoverTile.build;
-            }
-        }
 
-        return null;
-
-
-    }
-    @Nullable
-    Displayable hoveredblock(){
-        Vec2 v = topTable.stageToLocalCoordinates(Core.input.mouse());
-
-        //if the mouse intersects the table or the UI has the mouse, no hovering can occur
-        if(Core.scene.hasMouse() || topTable.hit(v.x, v.y, false) != null) return null;
-
-        //check tile being hovered over
-        Tile hoverTile = world.tileWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
-        if(hoverTile != null){
-            //if the tile has a building, display it
-            if(hoverTile.build != null && hoverTile.build.displayable() && !hoverTile.build.inFogTo(player.team())){
-                return nextFlowBuild = hoverTile.build;
-            }
-        }
-
-        return null;
-    }
-
-    @Nullable
-    Tile hoveredTile(){
-        Vec2 v = topTable.stageToLocalCoordinates(Core.input.mouse());
-
-        //if the mouse intersects the table or the UI has the mouse, no hovering can occur
-        if(Core.scene.hasMouse() || topTable.hit(v.x, v.y, false) != null) return null;
-
-        //check tile being hovered over
-        Tile hoverTile = world.tileWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
-        if(hoverTile != null && !(hoverTile.build!=null && hoverTile.build.inFogTo(player.team()))) return hoverTile;
-        return null;
+        return hover2;
     }
 
     void arcSelectUnits(Table table, String icon, String info, Boolf<Unit> cons){
@@ -898,13 +862,13 @@ public class PlacementFragment{
         table.button(icon, Styles.cleart, () -> {}).tooltip(info).size(size).with(b->{
             var listener = new ClickListener();
             b.clicked(KeyCode.mouseLeft, () -> {
-                control.input.selectedUnits = control.input.selectedUnits.select(cons::get);
+                control.input.selectedUnits = control.input.selectedUnits.select(cons);
                 Events.fire(Trigger.unitCommandChange);
                 UIExt.announce("[cyan]arc控制器\n[acid]选择" + info + "！");
             });
             //right click -> remove
             b.clicked(KeyCode.mouseRight, () -> {
-                control.input.selectedUnits.removeAll(cons::get);
+                control.input.selectedUnits.removeAll(cons);
                 Events.fire(Trigger.unitCommandChange);
                 UIExt.announce("[cyan]arc控制器\n[orange]移除" + info + "！");
             });
