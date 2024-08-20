@@ -28,9 +28,6 @@ class AdvanceToolTable : ToolTableBase() {
         var worldCreator: Boolean = false
 
         @JvmField
-        var forcePlacement: Boolean = false
-
-        @JvmField
         var allBlocksReveal: Boolean = false
     }
 
@@ -42,7 +39,6 @@ class AdvanceToolTable : ToolTableBase() {
         Events.on(EventType.ResetEvent::class.java) { _ ->
             if (!Vars.state.rules.editor) {
                 worldCreator = false
-                forcePlacement = false
                 allBlocksReveal = false
             }
         }
@@ -84,8 +80,6 @@ class AdvanceToolTable : ToolTableBase() {
             with(table().get()) {
                 button("创世神", Styles.flatToggleMenut) { worldCreator = !worldCreator }
                     .checked { worldCreator }.size(70f, 30f)
-                button("强制放置", Styles.flatToggleMenut) { forcePlacement = !forcePlacement }
-                    .checked { forcePlacement }.size(72f, 30f)
                 button("解禁", Styles.flatToggleMenut) {
                     allBlocksReveal = !allBlocksReveal
                     Reflect.invoke<Any>(Vars.ui.hudfrag.blockfrag, "rebuild")

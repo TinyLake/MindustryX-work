@@ -197,13 +197,6 @@ public class Build{
 
     /** Returns whether a tile can be placed at this location by this team. */
     public static boolean validPlace(Block type, Team team, int x, int y, int rotation, boolean checkVisible){
-        //the wave team can build whatever they want as long as it's visible - banned blocks are not applicable
-
-        if(AdvanceToolTable.forcePlacement){
-            Tile tile = world.tile(x, y);
-            return tile != null;
-        }
-
         if (AdvanceToolTable.worldCreator) {
             Tile tile = world.tile(x, y);
             if (tile == null) return false;
@@ -213,7 +206,9 @@ public class Build{
             if (type instanceof Floor f) {
                 return !(tile.floor == f);
             }
+            return true;
         }
+        //the wave team can build whatever they want as long as it's visible - banned blocks are not applicable
         if(type == null || (checkVisible && (!type.environmentBuildable() || (!type.isPlaceable() && !(state.rules.waves && team == state.rules.waveTeam && type.isVisible()))))){
             return false;
         }
