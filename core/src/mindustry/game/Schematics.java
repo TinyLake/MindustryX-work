@@ -384,10 +384,10 @@ public class Schematics implements Loadable{
     public Schematic create(int x, int y, int x2, int y2){
         Team team = headless ? null : Vars.player.team();
         NormalizeResult result = Placement.normalizeArea(x, y, x2, y2, 0, false, maxSchematicSize);
-        x = result.x;
-        y = result.y;
-        x2 = result.x2;
-        y2 = result.y2;
+        x = Mathf.clamp(result.x, 0, world.width() - 1);
+        y = Mathf.clamp(result.y, 0, world.height() - 1);
+        x2 = Mathf.clamp(result.x2, 0, world.width() - 1);
+        y2 = Mathf.clamp(result.y2, 0, world.height() - 1);
 
         int ox = x, oy = y, ox2 = x2, oy2 = y2;
 
