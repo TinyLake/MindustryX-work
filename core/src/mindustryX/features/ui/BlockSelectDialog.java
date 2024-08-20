@@ -46,7 +46,7 @@ public class BlockSelectDialog extends BaseDialog{
     private void rebuild(){
         blockTable.clear();
         blockTable.table(td -> {
-            Seq<Block> blocks = content.blocks().select(block -> condition.get(block) && (searchBlock.isEmpty() || block.name.contains(searchBlock) || block.localizedName.contains(searchBlock)) && (block.privileged || AdvanceToolTable.allBlocksReveal || !block.isHidden())).sort(block -> block.group.ordinal());
+            Seq<Block> blocks = content.blocks().select(block -> condition.get(block) && (searchBlock.isEmpty() || block.name.contains(searchBlock) || block.localizedName.contains(searchBlock)) && block.isVisible()).sort(block -> block.group.ordinal());
             Seq<BlockGroup> blockGroups = blocks.map(block -> block.group).distinct();
             blockGroups.each(blockGroup -> {
                 td.row();

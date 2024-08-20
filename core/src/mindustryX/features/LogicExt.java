@@ -7,6 +7,8 @@ import mindustry.game.EventType.*;
 public class LogicExt{
     public static boolean limitUpdate = false;
     public static int limitDst = 0, limitTimer = 10;
+    public static boolean worldCreator = false;
+    public static boolean allUnlocked = false;
     public static boolean terrainSchematic = false;
     public static boolean invertMapClick = false;
 
@@ -18,6 +20,8 @@ public class LogicExt{
                 limitUpdate = false;
                 limitTimer = 10;
             }
+            worldCreator = Core.settings.getBool("worldCreator");
+            allUnlocked = Core.settings.getBool("allUnlocked");
             terrainSchematic = Core.settings.getBool("terrainSchematic");
             invertMapClick = Core.settings.getBool("invertMapClick");
         });

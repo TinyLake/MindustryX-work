@@ -17,7 +17,7 @@ import mindustry.world.blocks.ConstructBlock.*;
 import mindustry.world.blocks.environment.Floor;
 import mindustry.world.blocks.environment.OverlayFloor;
 import mindustry.world.blocks.storage.CoreBlock.*;
-import mindustryX.features.ui.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -76,7 +76,7 @@ public class Build{
             return;
         }
 
-        if(AdvanceToolTable.worldCreator){
+        if(LogicExt.worldCreator){
             Tile tile = world.tile(x, y);
             if(tile == null) return;
             if(result == Blocks.cliff) {
@@ -197,7 +197,7 @@ public class Build{
 
     /** Returns whether a tile can be placed at this location by this team. */
     public static boolean validPlace(Block type, Team team, int x, int y, int rotation, boolean checkVisible){
-        if (AdvanceToolTable.worldCreator) {
+        if (LogicExt.worldCreator) {
             Tile tile = world.tile(x, y);
             if (tile == null) return false;
             if (type instanceof OverlayFloor of) {
@@ -338,7 +338,7 @@ public class Build{
     /** @return whether the tile at this position is breakable by this team */
     public static boolean validBreak(Team team, int x, int y){
         Tile tile = world.tile(x, y);
-        if(AdvanceToolTable.worldCreator && tile.block() != Blocks.air) return true;
+        if(LogicExt.worldCreator && tile.block() != Blocks.air) return true;
         return tile != null && tile.block() != Blocks.air && (tile.block().canBreak(tile) && (tile.breakable() || state.rules.allowEnvironmentDeconstruct)) && tile.interactable(team);
     }
 }

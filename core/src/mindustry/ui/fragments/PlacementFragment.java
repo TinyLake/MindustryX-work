@@ -29,12 +29,12 @@ import mindustry.world.*;
 import mindustry.world.blocks.ConstructBlock;
 import mindustry.world.blocks.ConstructBlock.*;
 import mindustryX.features.*;
-import mindustryX.features.ui.*;
 
 import static mindustry.Vars.*;
 
 public class PlacementFragment{
     private int rowWidth, maxRow;
+    private boolean lastAllUnlocked = LogicExt.allUnlocked;
 
     public Category currentCategory = Category.distribution;
 
@@ -114,7 +114,7 @@ public class PlacementFragment{
                 if(nextFlowBuild.liquids != null) nextFlowBuild.liquids.updateFlow();
             }
 
-            if(rowWidth != Core.settings.getInt("itemSelectionWidth", 4) || maxRow != Core.settings.getInt("itemSelectionHeight", 4)){
+            if(rowWidth != Core.settings.getInt("itemSelectionWidth", 4) || maxRow != Core.settings.getInt("itemSelectionHeight", 4) || lastAllUnlocked != LogicExt.allUnlocked){
                 rebuild();
             }
         });
@@ -139,7 +139,7 @@ public class PlacementFragment{
         if(Core.input.keyTap(Binding.pick) && player.isBuilder() && !Core.scene.hasDialog()){ //mouse eyedropper select
             var build = world.buildWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
 
-            if (build == null && AdvanceToolTable.worldCreator) {
+            if (build == null && LogicExt.worldCreator) {
                 var tile = world.tileWorld(Core.input.mouseWorld().x, Core.input.mouseWorld().y);
                 if (tile != null) {
                     Block target;
@@ -152,7 +152,7 @@ public class PlacementFragment{
                     else {
                         target = tile.floor();
                     }
-                    if (target != Blocks.air && (target.isVisible() || AdvanceToolTable.allBlocksReveal)) {
+                    if (target != Blocks.air && target.isVisible()) {
                         input.block = target;
                         currentCategory = input.block.category;
                         return true;
@@ -274,6 +274,7 @@ public class PlacementFragment{
     }
 
     public void build(Group parent){
+        lastAllUnlocked = LogicExt.allUnlocked;
         rowWidth = Core.settings.getInt("itemSelectionWidth", 4);
         maxRow = Core.settings.getInt("itemSelectionHeight", 4);
         parent.fill(full -> {
@@ -293,14 +294,14 @@ public class PlacementFragment{
                     group.setMinCheckCount(0);
 
                     for(Block block : getUnlockedByCategory(currentCategory)){
-                        if(!unlocked(block) && !AdvanceToolTable.allBlocksReveal) continue;
+                        if(!unlocked(block)) continue;
                         if (block == Blocks.air || block instanceof ConstructBlock) continue;
                         if(index++ % rowWidth == 0){
                             blockTable.row();
                         }
 
                         ImageButton button = blockTable.button(new TextureRegionDrawable(block.uiIcon), Styles.selecti, () -> {
-                            if(unlocked(block) || AdvanceToolTable.allBlocksReveal){
+                            if(unlocked(block)){
                                 if((Core.input.keyDown(KeyCode.shiftLeft) || Core.input.keyDown(KeyCode.controlLeft)) && Fonts.getUnicode(block.name) != 0){
                                     Core.app.setClipboardText((char)Fonts.getUnicode(block.name) + "");
                                     ui.showInfoFade("@copied");
@@ -389,10 +390,10 @@ public class PlacementFragment{
                                 final String keyComboFinal = keyCombo;
                                 header.left();
                                 header.add(new Image(displayBlock.uiIcon)).size(8 * 4);
-                                header.labelWrap(() -> !unlocked(displayBlock) && !AdvanceToolTable.allBlocksReveal ? Core.bundle.get("block.unknown") : displayBlock.localizedName + keyComboFinal)
+                                header.labelWrap(() -> !unlocked(displayBlock) ? Core.bundle.get("block.unknown") : displayBlock.localizedName + keyComboFinal)
                                 .left().width(190f).padLeft(5);
                                 header.add().growX();
-                                if(unlocked(displayBlock) || AdvanceToolTable.allBlocksReveal){
+                                if(unlocked(displayBlock)){
                                     header.button("?", Styles.flatBordert, () -> {
                                         ui.content.show(displayBlock);
                                         Events.fire(new BlockInfoEvent());
@@ -820,7 +821,7 @@ public class PlacementFragment{
     }
 
     Seq<Block> getUnlockedByCategory(Category cat){
-        return returnArray2.selectFrom(content.blocks(), block -> block.category == cat &&(AdvanceToolTable.allBlocksReveal||block.isVisible() && unlocked(block)) ).sort((b1, b2) -> Boolean.compare(!b1.isPlaceable(), !b2.isPlaceable()));
+        return returnArray2.selectFrom(content.blocks(), block -> block.category == cat && block.isVisible() && unlocked(block)).sort((b1, b2) -> Boolean.compare(!b1.isPlaceable(), !b2.isPlaceable()));
     }
 
     Block getSelectedBlock(Category cat){
@@ -828,7 +829,7 @@ public class PlacementFragment{
     }
 
     boolean unlocked(Block block){
-        return block.unlockedNow() && block.placeablePlayer && block.environmentBuildable() &&
+        return LogicExt.allUnlocked || block.unlockedNow() && block.placeablePlayer && block.environmentBuildable() &&
             block.supportsEnv(state.rules.env); //TODO this hides env unsupported blocks, not always a good thing
     }
 

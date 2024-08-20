@@ -16,7 +16,7 @@ import mindustry.graphics.*;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.*;
-import mindustryX.features.ui.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 import static mindustryX.features.ArcOld.colorizeContent;
@@ -56,7 +56,7 @@ public class DatabaseDialog extends BaseDialog{
 
             Seq<UnlockableContent> array = allContent[j]
                 .select(c -> c instanceof UnlockableContent u &&
-                    (AdvanceToolTable.allBlocksReveal || !u.isHidden()) &&
+                    (LogicExt.allUnlocked || !u.isHidden()) &&
                     (text.isEmpty() || u.localizedName.toLowerCase().contains(text))).as();
             if(array.size == 0) continue;
 

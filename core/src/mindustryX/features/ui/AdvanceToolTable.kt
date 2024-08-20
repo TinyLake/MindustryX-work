@@ -1,14 +1,10 @@
 package mindustryX.features.ui
 
-import arc.Core
-import arc.Events
 import arc.math.Mathf
 import arc.struct.Seq
-import arc.util.Reflect
 import mindustry.Vars
 import mindustry.content.Items
 import mindustry.content.UnitTypes
-import mindustry.game.EventType
 import mindustry.game.Team
 import mindustry.gen.Icon
 import mindustry.gen.Iconc
@@ -23,25 +19,11 @@ import mindustryX.features.UIExt
 
 //move from mindustry.arcModule.ui.AdvanceToolTable
 class AdvanceToolTable : ToolTableBase() {
-    companion object {
-        @JvmField
-        var worldCreator: Boolean = false
-
-        @JvmField
-        var allBlocksReveal: Boolean = false
-    }
-
     val factoryDialog: ArcUnitFactoryDialog = ArcUnitFactoryDialog()
 
     init {
         icon = Iconc.wrench.toString()
         rebuild()
-        Events.on(EventType.ResetEvent::class.java) { _ ->
-            if (!Vars.state.rules.editor) {
-                worldCreator = false
-                allBlocksReveal = false
-            }
-        }
     }
 
     override fun buildTable() {
@@ -78,12 +60,11 @@ class AdvanceToolTable : ToolTableBase() {
 
             row().add("建筑：")
             with(table().get()) {
-                button("创世神", Styles.flatToggleMenut) { worldCreator = !worldCreator }
-                    .checked { worldCreator }.size(70f, 30f)
+                button("创世神", Styles.flatToggleMenut) { Settings.toggle("worldCreator") }
+                    .checked { LogicExt.worldCreator }.size(70f, 30f)
                 button("解禁", Styles.flatToggleMenut) {
-                    allBlocksReveal = !allBlocksReveal
-                    Reflect.invoke<Any>(Vars.ui.hudfrag.blockfrag, "rebuild")
-                }.checked { allBlocksReveal }
+                    Settings.toggle("allUnlocked")
+                }.checked { LogicExt.allUnlocked }
                     .tooltip("[acid]显示并允许建造所有物品").size(50f, 30f)
                 button("地形蓝图", Styles.flatToggleMenut) { Settings.toggle("terrainSchematic") }
                     .checked { LogicExt.terrainSchematic }.size(72f, 30f)

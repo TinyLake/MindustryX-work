@@ -177,10 +177,8 @@ public class ArcOld{
             c.addCategory("arcWeakCheat");
             c.checkPref("save_more_map", false);
             c.checkPref("forceIgnoreAttack", false);
-            c.checkPref("allBlocksReveal", false, b -> AdvanceToolTable.allBlocksReveal = b);
-            AdvanceToolTable.allBlocksReveal = settings.getBool("allBlocksReveal");
-            c.checkPref("worldCreator", false, b -> AdvanceToolTable.worldCreator = b);
-            AdvanceToolTable.worldCreator = settings.getBool("worldCreator");
+            c.checkPref("allUnlocked", false);
+            c.checkPref("worldCreator", false);
             c.checkPref("overrideSkipWave", false);
             c.checkPref("forceConfigInventory", false);
             c.addCategory("arcStrongCheat");

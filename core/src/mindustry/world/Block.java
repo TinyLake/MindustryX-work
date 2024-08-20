@@ -917,7 +917,7 @@ public class Block extends UnlockableContent implements Senseable{
     }
 
     public boolean isVisible(){
-        return !isHidden() && (state.rules.editor || (!state.rules.hideBannedBlocks || !state.rules.isBanned(this)));
+        return LogicExt.allUnlocked || !isHidden() && (state.rules.editor || (!state.rules.hideBannedBlocks || !state.rules.isBanned(this)));
     }
 
     public boolean isVisibleOn(Planet planet){
@@ -925,7 +925,7 @@ public class Block extends UnlockableContent implements Senseable{
     }
 
     public boolean isPlaceable(){
-        return AdvanceToolTable.allBlocksReveal || isVisible() && (!state.rules.isBanned(this) || state.rules.editor) && supportsEnv(state.rules.env);
+        return LogicExt.worldCreator || isVisible() && (!state.rules.isBanned(this) || state.rules.editor) && supportsEnv(state.rules.env);
     }
 
     /** @return whether this block supports a specific environment. */

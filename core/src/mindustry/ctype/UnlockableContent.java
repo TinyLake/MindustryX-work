@@ -16,6 +16,7 @@ import mindustry.graphics.MultiPacker.*;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.meta.*;
+import mindustryX.features.*;
 
 import static mindustry.Vars.*;
 
@@ -222,7 +223,7 @@ public abstract class UnlockableContent extends MappableContent{
 
     /** @return whether this content is unlocked, or the player is in a custom (non-campaign) game. */
     public boolean unlockedNow(){
-        return unlocked() || !state.isCampaign();
+        return LogicExt.allUnlocked || unlocked() || !state.isCampaign();
     }
 
     public boolean locked(){
