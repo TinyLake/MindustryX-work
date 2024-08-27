@@ -20,26 +20,6 @@ import static mindustry.Vars.*;
 public class ArcOld{
     public static void init(Seq<LazySettingsCategory> categories){
         categories.add(new LazySettingsCategory("@settings.arc", () -> Icon.star, (c) -> {
-            c.addCategory("arcHudToolbox");
-            c.sliderPref("AuxiliaryTable", 0, 0, 3, 1, s -> switch(s){
-                case 0 -> "关闭";
-                case 1 -> "左上-右";
-                case 2 -> "左上-下";
-                case 3 -> "右上-下";
-                default -> "";
-            });
-            c.checkPref("arcSpecificTable", true);
-            c.checkPref("logicSupport", true);
-            c.checkPref("powerStatistic", true);
-            c.sliderPref("arccoreitems", 3, 0, 3, 1, s -> switch(s){
-                case 0 -> "不显示";
-                case 1 -> "资源状态";
-                case 2 -> "兵种状态";
-                default -> "显示资源和兵种";
-            });
-            c.sliderPref("arcCoreItemsCol", 5, 4, 15, 1, i -> i + "列");
-            c.checkPref("showQuickToolTable", true);
-
             c.addCategory("arcCgameview");
             c.checkPref("hoveredTileInfo", false);
             c.checkPref("alwaysshowdropzone", false);
@@ -51,11 +31,6 @@ public class ArcOld{
             }
 
             c.addCategory("arcCDisplayBlock");
-            c.sliderPref("blockRenderLevel", 2, 0, 2, 1, s -> switch(s){
-                case 0 -> "隐藏全部建筑";
-                case 1 -> "只显示建筑状态";
-                default -> "全部显示";
-            });
             c.checkPref("forceEnableDarkness", true, (b) -> enableDarkness = b);
             enableDarkness = settings.getBool("forceEnableDarkness");
             c.sliderPref("HiddleItemTransparency", 0, 0, 100, 2, i -> i > 0 ? i + "%" : "关闭");
@@ -104,21 +79,16 @@ public class ArcOld{
 
             c.addCategory("arcAddUnitInfo");
             c.checkPref("alwaysShowPlayerUnit", false);
-
             c.sliderPref("unitTransparency", 100, 0, 100, 5, i -> i > 0 ? i + "%" : "关闭");
             c.sliderPref("unitDrawMinHealth", settings.getInt("minhealth_unitshown", 0), 0, 2500, 50, i -> i + "[red]HP");
-
             c.checkPref("unitHealthBar", false);
             c.sliderPref("unitBarDrawMinHealth", settings.getInt("minhealth_unithealthbarshown", 0), 0, 2500, 100, i -> i + "[red]HP");
-
-
             c.sliderPref("unitWeaponRange", settings.getInt("unitAlertRange", 0), 0, 30, 1, s -> switch(s){
                 case 0 -> "关闭";
                 case 30 -> "一直开启";
                 default -> s + "格";
             });
             c.sliderPref("unitWeaponRangeAlpha", settings.getInt("unitweapon_range", 0), 0, 100, 1, i -> i > 0 ? i + "%" : "关闭");
-
             c.checkPref("unitWeaponTargetLine", false);
             c.checkPref("showminebeam", true);
             c.checkPref("unitItemCarried", true);
@@ -174,34 +144,6 @@ public class ArcOld{
             c.checkPref("arcAlwaysTeamColor", false);
             c.checkPref("arcSelfName", false);
 
-            c.addCategory("arcWeakCheat");
-            c.checkPref("save_more_map", false);
-            c.checkPref("forceIgnoreAttack", false);
-            c.checkPref("allUnlocked", false);
-            c.checkPref("worldCreator", false);
-            c.checkPref("overrideSkipWave", false);
-            c.checkPref("forceConfigInventory", false);
-            c.addCategory("arcStrongCheat");
-            c.checkPref("showOtherTeamResource", false);
-            c.checkPref("showOtherTeamState", false);
-            c.checkPref("playerNeedShooting", false);
-        }));
-        categories.add(new LazySettingsCategory("@settings.specmode", () -> Icon.info, (c) -> {
-            c.addCategory("moreContent");
-            c.checkPref("override_boss_shown", false);
-            c.sliderPref("minimapSize", 140, 40, 400, 10, i -> i + "");
-            c.sliderPref("maxSchematicSize", 64, 64, 257, 1, v -> {
-                maxSchematicSize = v == 257 ? Integer.MAX_VALUE : v;
-                return v == 257 ? "无限" : String.valueOf(v);
-            });
-            c.sliderPref("itemSelectionHeight", 4, 4, 12, i -> i + "行");
-            c.sliderPref("itemSelectionWidth", 4, 4, 12, i -> i + "列");
-            c.sliderPref("blockInventoryWidth", 3, 3, 16, i -> i + "");
-            c.sliderPref("editorBrush", 4, 3, 12, i -> i + "");
-            c.checkPref("autoSelSchematic", false);
-            c.checkPref("researchViewer", false);
-
-
             c.addCategory("arcRadar");
             c.sliderPref("radarMode", 0, 0, 30, 1, s -> switch(s){
                 case 0 -> "关闭";
@@ -213,22 +155,17 @@ public class ArcOld{
                 return "[lightgray]x[white]" + Strings.autoFixed(s * 0.1f, 1) + "倍";
             });
 
-            c.addCategory("personalized");
-            c.checkPref("menuFloatText", true);
-            c.checkPref("colorizedContent", false);
-            c.textPref("arcBackgroundPath", "");
-
-            c.addCategory("developerMode");
-            c.checkPref("rotateCanvas", false);
-            c.checkPref("limitupdate", false, v -> {
-                if(!v) return;
-                settings.put("limitupdate", false);
-                ui.showConfirm("确认开启限制更新", "此功能可以大幅提升fps，但会导致视角外的一切停止更新\n在服务器里会造成不同步\n强烈不建议在单人开启\n\n[darkgray]在帧数和体验里二选一", () -> {
-                    settings.put("limitupdate", true);
-                });
-            });
-            c.sliderPref("limitdst", 10, 0, 100, 1, s -> s + "格");
-            c.checkPref("developMode", false);
+            c.addCategory("arcWeakCheat");
+            c.checkPref("save_more_map", false);
+            c.checkPref("forceIgnoreAttack", false);
+            c.checkPref("allUnlocked", false);
+            c.checkPref("worldCreator", false);
+            c.checkPref("overrideSkipWave", false);
+            c.checkPref("forceConfigInventory", false);
+            c.addCategory("arcStrongCheat");
+            c.checkPref("showOtherTeamResource", false);
+            c.checkPref("showOtherTeamState", false);
+            c.checkPref("playerNeedShooting", false);
         }));
     }
 

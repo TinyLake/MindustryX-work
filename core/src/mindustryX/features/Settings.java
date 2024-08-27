@@ -9,7 +9,8 @@ import mindustry.game.EventType.*;
 import mindustry.gen.*;
 import mindustry.ui.dialogs.SettingsMenuDialog.*;
 
-import static mindustry.Vars.maxSchematicSize;
+import static arc.Core.settings;
+import static mindustry.Vars.*;
 
 public class Settings{
     public static class LazySettingsCategory extends SettingsCategory{
@@ -31,14 +32,34 @@ public class Settings{
         categories.add(new LazySettingsCategory("@settings.category.mindustryX", () -> Icon.box, (c) -> {
             c.checkPref("showUpdateDialog", true);
             c.checkPref("githubMirror", false);
+            c.checkPref("replayRecord", false);
 
-            c.addCategory("gameSettings");
+            c.addCategory("gameUI");
+            c.checkPref("menuFloatText", true);
             c.checkPref("deadOverlay", false);
             c.checkPref("invertMapClick", false);
-
-            c.addCategory("arcReWork");
-            c.checkPref("replayRecord", false);
-            c.checkPref("menuFloatText", true);
+            c.checkPref("arcSpecificTable", true);
+            c.checkPref("logicSupport", true);
+            c.checkPref("powerStatistic", true);
+            c.checkPref("showQuickToolTable", true);
+            c.sliderPref("AuxiliaryTable", 0, 0, 3, 1, s -> switch(s){
+                case 0 -> "关闭";
+                case 1 -> "左上-右";
+                case 2 -> "左上-下";
+                case 3 -> "右上-下";
+                default -> "";
+            });
+            c.sliderPref("arccoreitems", 3, 0, 3, 1, s -> switch(s){
+                case 0 -> "不显示";
+                case 1 -> "资源状态";
+                case 2 -> "兵种状态";
+                default -> "显示资源和兵种";
+            });
+            c.sliderPref("arcCoreItemsCol", 5, 4, 15, 1, i -> i + "列");
+            c.sliderPref("itemSelectionHeight", 4, 4, 12, i -> i + "行");
+            c.sliderPref("itemSelectionWidth", 4, 4, 12, i -> i + "列");
+            c.sliderPref("blockInventoryWidth", 3, 3, 16, i -> i + "");
+            c.sliderPref("editorBrush", 4, 3, 12, i -> i + "");
             c.checkPref("researchViewer", false);
             c.sliderPref("minimapSize", 140, 40, 400, 10, i -> i + "");
             c.sliderPref("maxSchematicSize", 64, 64, 257, 1, v -> {
@@ -49,8 +70,13 @@ public class Settings{
                 var v = Core.settings.getInt("maxSchematicSize");
                 maxSchematicSize = v == 257 ? Integer.MAX_VALUE : v;
             }
+            c.checkPref("colorizedContent", false);
+            c.textPref("arcBackgroundPath", "");
+            c.checkPref("autoSelSchematic", false);
+            c.checkPref("arcCommandTable", true);
 
             c.addCategory("blockSettings");
+            c.checkPref("rotateCanvas", false);
             c.checkPref("staticShieldsBorder", false);
             c.checkPref("arcTurretPlaceCheck", false);
             c.checkPref("arcchoiceuiIcon", false);
@@ -69,10 +95,19 @@ public class Settings{
             c.checkPref("showMineBeam".toLowerCase(), true);
             c.checkPref("noPlayerHitBox", false);
             c.checkPref("payloadpreview", true);
+            c.checkPref("unithitbox", false);
 
             c.addCategory("developerMode");
             c.checkPref("renderMerge", true);
             c.checkPref("renderSort", false);
+            c.checkPref("limitupdate", false, v -> {
+                if(!v) return;
+                settings.put("limitupdate", false);
+                ui.showConfirm("确认开启限制更新", "此功能可以大幅减少LG开销，但会导致视角外的一切停止更新\n强烈不建议在单人开启，在服务器里会造成不同步", () -> {
+                    settings.put("limitupdate", true);
+                });
+            });
+            c.sliderPref("limitdst", 10, 0, 100, 1, s -> s + "格");
         }));
         ArcOld.init(categories);
         Events.on(ClientLoadEvent.class, e -> {
