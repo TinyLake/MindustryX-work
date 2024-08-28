@@ -1,4 +1,5 @@
 @file:JvmName("FuncX")
+@file:JvmMultifileClass
 
 package mindustryX.features.func
 
