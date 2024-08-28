@@ -110,6 +110,7 @@ public enum Binding implements KeyBind{
     point(KeyCode.j),
     lockonLastMark(KeyCode.unset),
     toggle_block_render(KeyCode.unset),
+    focusLogicController(KeyCode.unset),
     ;
 
     private final KeybindValue defaultValue;

@@ -6,8 +6,9 @@ import arc.util.*;
 import mindustry.*;
 import mindustry.gen.*;
 import mindustry.input.*;
-import mindustryX.features.*;
 import mindustryX.features.Settings;
+import mindustryX.features.*;
+import mindustryX.features.func.*;
 import mindustryX.features.ui.*;
 
 import java.net.*;
@@ -92,11 +93,13 @@ public class Hooks implements ApplicationListener{
             ArcScanMode.enabled = !ArcScanMode.enabled;
         }
         if(Core.input.keyTap(Binding.showRTSAi)){
-            Core.settings.put("alwaysShowUnitRTSAi", !Core.settings.getBool("alwaysShowUnitRTSAi"));
+            Settings.toggle("alwaysShowUnitRTSAi");
         }
         if(Core.input.keyTap(Binding.superUnitEffect)){
-            int level = Core.settings.getInt("superUnitEffect");
-            Core.settings.put("superUnitEffect", (level + 1) % 3);
+            Settings.cycle("superUnitEffect", 3);
+        }
+        if(Core.input.keyTap(Binding.focusLogicController)){
+            FuncX.focusLogicController();
         }
     }
 
