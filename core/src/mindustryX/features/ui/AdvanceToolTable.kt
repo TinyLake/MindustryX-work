@@ -1,5 +1,6 @@
 package mindustryX.features.ui
 
+import arc.graphics.Color
 import arc.math.Mathf
 import arc.struct.Seq
 import mindustry.Vars
@@ -11,6 +12,7 @@ import mindustry.gen.Iconc
 import mindustry.gen.Payloadc
 import mindustry.gen.Unit
 import mindustry.ui.Styles
+import mindustry.ui.dialogs.CustomRulesDialog
 import mindustry.world.blocks.payloads.Payload
 import mindustryX.features.LogicExt
 import mindustryX.features.Settings
@@ -20,6 +22,7 @@ import mindustryX.features.UIExt
 //move from mindustry.arcModule.ui.AdvanceToolTable
 class AdvanceToolTable : ToolTableBase() {
     val factoryDialog: ArcUnitFactoryDialog = ArcUnitFactoryDialog()
+    private val rulesDialog = CustomRulesDialog()
 
     init {
         icon = Iconc.wrench.toString()
@@ -29,6 +32,8 @@ class AdvanceToolTable : ToolTableBase() {
     override fun buildTable() {
         with(table().get()) {
             background = Styles.black6
+            row().add("警告：该页功能主要供单机使用").color(Color.yellow).colspan(2)
+
             row().add("单位：")
             with(table().get()) {
                 button(Items.copper.emoji() + "[acid]+", Styles.cleart) {
@@ -78,6 +83,9 @@ class AdvanceToolTable : ToolTableBase() {
                     .checked { Vars.state.rules.editor }.size(70f, 30f)
                 button("沙盒", Styles.flatToggleMenut) { Vars.state.rules.infiniteResources = !Vars.state.rules.infiniteResources }
                     .checked { Vars.state.rules.infiniteResources }.size(50f, 30f)
+                button(Iconc.edit.toString(), Styles.cleart) {
+                    rulesDialog.show(Vars.state.rules) { Vars.state.rules }
+                }.width(40f)
             }
 
             row().add("沙漏：")
