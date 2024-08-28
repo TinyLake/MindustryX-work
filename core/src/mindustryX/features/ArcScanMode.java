@@ -7,13 +7,12 @@ import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
 import arc.scene.event.*;
+import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
 import arc.util.*;
-import mindustry.ai.types.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
-import mindustry.input.*;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.world.*;
@@ -29,7 +28,7 @@ import static mindustry.Vars.*;
 //move from mindustry.arcModule.toolpack.ArcScanMode
 public class ArcScanMode{
     public static boolean enabled = false;
-    private static final Table ctTable = new Table();
+    private static final Label ctTable = new Label("");
     private static final Table spawnerTable = new Table();
     private static final Table flyerTable = new Table();
 
@@ -44,6 +43,15 @@ public class ArcScanMode{
         ui.hudGroup.addChild(ctTable);
         ui.hudGroup.addChild(spawnerTable);
         ui.hudGroup.addChild(flyerTable);
+
+        ctTable.setAlignment(Align.bottom, Align.center);
+        ctTable.visible(() -> enabled && state.isPlaying());
+        ctTable.update(() -> {
+            ctTable.setPosition(Core.input.mouseX(), Core.input.mouseY());
+            var pos = Core.input.mouseWorld();
+            ctTable.setText(Strings.format("@,@\n距离: @",
+            (int)(pos.x / tilesize), (int)(pos.y / tilesize), (int)(player.dst(pos) / tilesize)));
+        });
     }
 
     public static void draw(){
@@ -53,20 +61,8 @@ public class ArcScanMode{
             flyerTable.clear();
             return;
         }
-        updateCursorDisplay();
         updateSpawnerDisplay();
         drawTransportFlow();
-        if(Core.input.keyTap(Binding.select))
-            focusLogicController();
-    }
-
-    private static void updateCursorDisplay(){
-        ctTable.clear();
-        var pos = Tmp.v1.set(Core.input.mouseWorld());
-        Vec2 v = Core.camera.project(Tmp.v2.set(pos));
-        ctTable.setPosition(v.x, v.y);
-        ctTable.add(Strings.format("@,@", (int)(pos.x / tilesize), (int)(pos.y / tilesize)));
-        ctTable.row().add(Strings.format("距离: @", (int)(player.dst(pos) / tilesize)));
     }
 
     private static void updateSpawnerDisplay(){
@@ -124,17 +120,6 @@ public class ArcScanMode{
                 return;
             }
         }
-    }
-
-    private static void focusLogicController(){
-        Unit u = control.input.selectedUnit();
-        Building logic = null;
-        if(u instanceof BlockUnitc b){
-            logic = b.tile().buildOn().lastLogicController;
-        }else if(u != null && u.controller() instanceof LogicAI ai){
-            logic = ai.controller;
-        }
-        if(logic != null) control.input.panCamera(Tmp.v1.set(logic));
     }
 
     private static boolean canAccept(Block block){
