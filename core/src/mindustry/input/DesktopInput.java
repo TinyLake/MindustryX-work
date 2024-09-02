@@ -64,7 +64,6 @@ public class DesktopInput extends InputHandler{
     /** Time of most recent control group selection */
     public long lastCtrlGroupSelectMillis;
 
-    public boolean autoAim = false;
     /** Current thing being shot at. */
     public @Nullable Teamc target;
 
@@ -892,7 +891,6 @@ public class DesktopInput extends InputHandler{
 
         boolean manualShoot = Core.input.keyDown(Binding.select) && shouldShoot && !busy && (type.hasWeapons() || UnitTypes.block.equals(type)) && !boosted;
 
-        float mouseX = unit.aimX(), mouseY = unit.aimY();
         Vec2 aimPos = Core.input.mouseWorld();
 
         float lookAtAngle = Angles.mouseAngle(unit.x, unit.y);
@@ -912,7 +910,7 @@ public class DesktopInput extends InputHandler{
                     target = Units.closestTarget(unit.team, unit.x, unit.y, range, u -> u.checkTarget(type.targetAir, type.targetGround), u -> type.targetGround);
 
                     if(type.canHeal && target == null){
-                        target = Geometry.findClosest(unit.x, unit.y, indexer.getDamaged(Team.sharded));
+                        target = Geometry.findClosest(unit.x, unit.y, indexer.getDamaged(unit.team));
                         if(target != null && !unit.within(target, range)){
                             target = null;
                         }
@@ -922,31 +920,28 @@ public class DesktopInput extends InputHandler{
             else {
                 Vec2 intercept = Predict.intercept(unit, target, unit.hasWeapons() ? type.weapons.first().bullet.speed : 0f);
 
-                mouseX = intercept.x;
-                mouseY = intercept.y;
                 player.shooting = !boosted;
 
                 aimPos = intercept;
                 lookAtAngle = unit.angleTo(intercept);
             }
-        }
-        else {
+        }else{
             target = null;
         }
-        if (type.omniMovement && type.faceTarget && unit.isShooting) {
+        if(type.omniMovement && type.faceTarget && unit.isShooting) {
             unit.lookAt(lookAtAngle);
-        }
-        else {
+        }else{
             unit.lookAt(unit.prefRotation());
         }
 
         unit.movePref(movement);
-        if (!autoAim) unit.aim(aimPos);
+
+        unit.aim(aimPos);
         unit.controlWeapons(true, player.shooting && !boosted);
 
         player.boosting = Core.input.keyDown(Binding.boost) || Core.settings.getBool("forceBoost");
-        player.mouseX = mouseX;
-        player.mouseY = mouseY;
+        player.mouseX = unit.aimX();
+        player.mouseY = unit.aimY();
 
         //update payload input
         if(unit instanceof Payloadc){

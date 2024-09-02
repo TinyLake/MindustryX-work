@@ -1021,7 +1021,7 @@ public class MobileInput extends InputHandler implements GestureListener{
             payloadTarget = null;
         }
 
-        if (!Core.settings.getBool("viewMode")) {
+        if(!Core.settings.getBool("viewMode")){
             movement.set(targetPos).sub(player).limit(speed);
             movement.setAngle(Mathf.slerp(movement.angle(), unit.vel.angle(), 0.05f));
 
@@ -1029,8 +1029,7 @@ public class MobileInput extends InputHandler implements GestureListener{
                 movement.setZero();
                 unit.vel.approachDelta(Vec2.ZERO, unit.speed() * type.accel / 2f);
             }
-        }
-        else {
+        }else{
             movement.setZero();
         }
 
