@@ -233,6 +233,7 @@ public class World{
     }
 
     public Rect getQuadBounds(Rect in){
+        if(height() == 0) throw new Error("World is empty");
         return in.set(-finalWorldBounds, -finalWorldBounds, width() * tilesize + finalWorldBounds * 2, height() * tilesize + finalWorldBounds * 2);
     }
 

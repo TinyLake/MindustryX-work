@@ -1,6 +1,7 @@
 package mindustry.maps.filters;
 
 import arc.scene.ui.layout.*;
+import arc.util.*;
 import mindustry.*;
 import mindustry.gen.*;
 import mindustry.logic.*;
@@ -45,6 +46,7 @@ public class LogicFilter extends GenerateFilter{
             //assembler has no variables, all the standard ones are null
             executor.load(LAssembler.assemble(code, true));
         }catch(Throwable ignored){
+            Log.err(ignored);
             //if loading code
             return;
         }

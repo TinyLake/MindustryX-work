@@ -609,6 +609,7 @@ public class Control implements ApplicationListener, Loadable{
         try{
             assets.update();
         }catch(Exception ignored){
+            Log.err(ignored);
         }
 
         input.updateState();
