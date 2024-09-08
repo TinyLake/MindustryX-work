@@ -19,11 +19,14 @@ import mindustry.ui.Bar
 import mindustry.ui.dialogs.BaseDialog
 import mindustryX.VarsX
 import mindustryX.features.ui.Format
-import kotlin.system.exitProcess
 
 object AutoUpdate {
     data class Release(val tag: String, val version: String, val json: Jval) {
         data class Asset(val name: String, val url: String)
+
+        fun matchCurrent(): Boolean {
+            return tag == "$currentBranch-build" || json.getString("body", "").contains("REPLACE $currentBranch")
+        }
 
         fun findAsset(): Asset? {
             val assets = json.get("assets").asArray().asIterable()
@@ -44,7 +47,8 @@ object AutoUpdate {
     val repo = "TinyLake/MindustryX-work"
     var versions = emptyList<Release>()
     val currentBranch get() = Version.mdtXBuild.split('-', limit = 2).getOrNull(1)
-    var newVersion: Release? = null
+    var latest: Release? = null
+    val newVersion: Release? get() = latest?.takeIf { it.version > Version.mdtXBuild }
 
     fun checkUpdate() {
         if (versions.isNotEmpty()) return
@@ -61,10 +65,10 @@ object AutoUpdate {
     }
 
     private fun fetchSuccess() {
-        val new = versions.find { it.tag == "$currentBranch-build" && it.version > Version.mdtXBuild } ?: return
-        newVersion = new
-        if (Core.settings.getBool("showUpdateDialog", true)) {
-            if (Vars.clientLoaded) return showDialog()
+        val available = versions.filter { it.matchCurrent() }
+        latest = available.maxByOrNull { it.version } ?: return
+        newVersion?.takeIf { Core.settings.getBool("showUpdateDialog", true) }?.let {
+            if (Vars.clientLoaded) return showDialog(newVersion)
             Events.on(EventType.ClientLoadEvent::class.java) {
                 Vars.ui.showConfirm("检测到新版MindustryX!\n打开更新列表?", ::showDialog)
             }
@@ -72,7 +76,7 @@ object AutoUpdate {
     }
 
     @JvmOverloads
-    fun showDialog(version: Release? = newVersion) {
+    fun showDialog(version: Release? = latest) {
         checkUpdate()
         val dialog = BaseDialog("自动更新")
         dialog.cont.apply {
