@@ -1,2 +1,28 @@
 sourceSets.main.java.srcDirs = ["src/main/java/"]
 sourceSets.main.resources.srcDirs = ["src/main/resources/"]
+/*
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).tap{
+    configureEach{
+        kotlinOptions{
+            freeCompilerArgs += [
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.source=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.source.util=ALL-UNNAMED",
+                    "--add-exports", "jdk.compiler/com.sun.source.util.Trees=ALL-UNNAMED",
+                    "--add-exports", "java.base/sun.reflect.annotation=ALL-UNNAMED",
+                    "--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"
+            ]
+        }
+    }
+}
+*/
+
+kotlin{
+    jvmToolchain(17)
+}

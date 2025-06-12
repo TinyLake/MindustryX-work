@@ -1,3 +1,6 @@
+plugins{
+    id 'org.jetbrains.kotlin.jvm'
+}
 sourceSets.main.java.srcDirs = ["src/"]
 
 project.ext.mainClassName = "mindustry.desktop.DesktopLauncher"
@@ -52,4 +55,13 @@ task dist(type: Jar, dependsOn: configurations.runtimeClasspath){
     manifest{
         attributes 'Main-Class': project.mainClassName
     }
+}
+repositories{
+    mavenCentral()
+}
+dependencies{
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+kotlin{
+    jvmToolchain(17)
 }

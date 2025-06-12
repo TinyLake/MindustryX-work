@@ -1,106 +1,155 @@
-package mindustry.annotations.misc;
+package mindustry.annotations.misc
 
-import arc.func.*;
-import arc.struct.*;
-import com.squareup.javapoet.*;
-import mindustry.annotations.Annotations.*;
-import mindustry.annotations.*;
-import mindustry.annotations.util.*;
-
-import javax.annotation.processing.*;
-import javax.lang.model.element.*;
+import arc.func.Prov
+import arc.struct.Seq
+import com.google.devtools.ksp.getAllSuperTypes
+import com.google.devtools.ksp.getDeclaredProperties
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.processing.SymbolProcessor
+import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.ksp.toClassName
+import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.ksp.writeTo
+import mindustry.annotations.Annotations.RegisterStatement
+import mindustry.annotations.impl.StructProcessor.Companion.annotation
+import mindustry.annotations.util.Utils.err
+import mindustry.annotations.util.Utils.isPrimitive
+import mindustry.annotations.util.Utils.packageName
+import mindustry.annotations.util.Utils.typeName
+import javax.annotation.processing.SupportedAnnotationTypes
 
 @SupportedAnnotationTypes("mindustry.annotations.Annotations.RegisterStatement")
-public class LogicStatementProcessor extends BaseProcessor{
+class LogicStatementProcessor(
+    val codeGenerator: CodeGenerator,
+    val logger: KSPLogger
+) : SymbolProcessor {
+    @Throws(Exception::class)
+    override fun process(resolver: Resolver): List<KSAnnotated> {
+        val type = TypeSpec.objectBuilder("LogicIO")
+            .addModifiers(KModifier.PUBLIC)
 
-    @Override
-    public void process(RoundEnvironment env) throws Exception{
-        TypeSpec.Builder type = TypeSpec.classBuilder("LogicIO")
-            .addModifiers(Modifier.PUBLIC);
+        val writer = FunSpec.builder("write")
+            .addModifiers(KModifier.PUBLIC)
+            .addParameter("obj", Any::class)
+            .addParameter("out", StringBuilder::class)
 
-        MethodSpec.Builder writer = MethodSpec.methodBuilder("write")
-            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-            .addParameter(Object.class, "obj")
-            .addParameter(StringBuilder.class, "out");
+        val reader = FunSpec.builder("read")
+            .addModifiers(KModifier.PUBLIC)
+            .returns(typeName("mindustry.logic.LStatement").copy(true))
+            .addParameter("tokens", Array::class.parameterizedBy(String::class))
+            .addParameter("length", Int::class)
 
-        MethodSpec.Builder reader = MethodSpec.methodBuilder("read")
-            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-            .returns(tname("mindustry.logic.LStatement"))
-            .addParameter(String[].class, "tokens")
-            .addParameter(int.class, "length");
+        val types = Seq.with(resolver.getSymbolsWithAnnotation(RegisterStatement::class.java.canonicalName).toList())
 
-        Seq<Stype> types = types(RegisterStatement.class);
+        type.addProperty(PropertySpec.builder(
+            "allStatements",
+            Seq::class.asTypeName().parameterizedBy(Prov::class.asTypeName().parameterizedBy(typeName("mindustry.logic.LStatement"))),
+            KModifier.PUBLIC
+        )
+            .initializer("Seq.with(" + types.toString(", ") { "\narc.func.Prov { LStatements.$it() }" } + "\n)").build())
 
-        type.addField(FieldSpec.builder(
-            ParameterizedTypeName.get(
-            ClassName.get(Seq.class),
-            ParameterizedTypeName.get(ClassName.get(Prov.class),
-                tname("mindustry.logic.LStatement"))), "allStatements", Modifier.PUBLIC, Modifier.STATIC)
-            .initializer("Seq.with(" + types.toString(", ", t -> "" + t.toString() + "::new") + ")").build());
+        var beganWrite = false
+        var beganRead = false
 
-        boolean beganWrite = false, beganRead = false;
+        for (c in types) {
+            val name = (c as KSClassDeclaration).annotation(RegisterStatement::class)!!.arguments[0]
 
-        for(Stype c : types){
-            String name = c.annotation(RegisterStatement.class).value();
-
-            if(beganWrite){
-                writer.nextControlFlow("else if(obj.getClass() == $T.class)", c.mirror());
-            }else{
-                writer.beginControlFlow("if(obj.getClass() == $T.class)", c.mirror());
-                beganWrite = true;
+            if (beganWrite) {
+                writer.nextControlFlow("else if(obj.javaClass == %T::class.java)", c.toClassName())
+            } else {
+                writer.beginControlFlow("if(obj.javaClass == %T::class.java)", c.toClassName())
+                beganWrite = true
             }
 
             //write the name & individual fields
-            writer.addStatement("out.append($S)", name);
+            writer.addStatement("`out`.append(%S)", name)
 
-            Seq<Svar> fields = c.fields();
-            fields.addAll(c.superclass().fields());
+            val fields = c.getDeclaredProperties().toMutableList()
+            c.superTypes
+                .mapNotNull { resolver.getClassDeclarationByName(it.resolve().declaration.qualifiedName!!) }
+                .filter { it.classKind == ClassKind.CLASS }.toList().firstOrNull()?.getDeclaredProperties()?.also { fields.addAll(it) }
 
-            String readSt = "if(tokens[0].equals($S))";
-            if(beganRead){
-                reader.nextControlFlow("else " + readSt, name);
-            }else{
-                reader.beginControlFlow(readSt, name);
-                beganRead = true;
+
+            val readSt = "if(tokens[0].equals(%S))"
+            if (beganRead) {
+                reader.nextControlFlow("else $readSt", name)
+            } else {
+                reader.beginControlFlow(readSt, name)
+                beganRead = true
             }
 
-            reader.addStatement("$T result = new $T()", c.mirror(), c.mirror());
+            reader.addStatement("val result: %T = %T()", c.toClassName(), c.toClassName())
 
-            int index = 0;
+            var index = 0
 
-            for(Svar field : fields){
-                if(field.isAny(Modifier.TRANSIENT, Modifier.STATIC)) continue;
+            fields.forEach { field ->
+                if (field.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_TRANSIENT)) return@forEach
+                if (field.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC)) return@forEach
 
-                writer.addStatement("out.append(\" \")");
-                writer.addStatement("out.append((($T)obj).$L$L)", c.mirror(), field.name(),
-                    Seq.with(typeu.directSupertypes(field.mirror())).contains(t -> t.toString().contains("java.lang.Enum")) ? ".name()" :
-                    "");
+                writer.addStatement("out.append(\" \")")
+                writer.addStatement(
+                    "out.append((obj as %T).%L%L)", c.toClassName(), field.toString(),
+                    if ((field.parentDeclaration as KSClassDeclaration)
+                            .getAllSuperTypes().any { it.toString().contains("java.lang.Enum") }
+                    ) ".name()" else ""
+                )
 
                 //reading primitives, strings and enums is supported; nothing else is
-                reader.addStatement("if(length > $L) result.$L = $L(tokens[$L])",
-                index + 1,
-                field.name(),
-                field.mirror().toString().equals("java.lang.String") ?
-                "" : (field.tname().isPrimitive() ? field.tname().box().toString() :
-                field.mirror().toString()) + ".valueOf", //if it's not a string, it must have a valueOf method
-                index + 1
-                );
+                if (field.toString().contains("StatementElem")) {
+                    logger.err(field.modifiers.toList().toString())
+                }
+                reader.addStatement(
+                    "if(length > %L) result.%L = %L(tokens[%L]%L)",
+                    index + 1,
+                    field,
+                    if (field.type.toTypeName().toString().lowercase().contains("string")) ""
+                    else if (field.type.toTypeName().toString().lowercase().contains("kotlin")) ""
+                    else (
+                            if (isPrimitive(field.type.toTypeName().toString())) field.type.toTypeName().toString()
+                            else
+                                field.type.toTypeName().toString()
+                            ) + ".valueOf",  //if it's not a string, it must have a valueOf method
+                    index + 1,
+                    if (field.type.toTypeName().toString().lowercase().contains("kotlin")) {
+                        when (field.type.toTypeName().toString()) {
+                            "kotlin.Int" -> ".toInt()"
+                            "kotlin.Float" -> ".toFloat()"
+                            "kotlin.Double" -> ".toDouble()"
+                            "kotlin.Long" -> ".toLong()"
+                            "kotlin.Short" -> ".toShort()"
+                            "kotlin.Byte" -> ".toByte()"
+                            "kotlin.Boolean" -> ".toBoolean()"
+                            else -> ""
+                        }
+                    } else ""
+                )
 
-                index ++;
+                index++
             }
 
-            reader.addStatement("result.afterRead()");
-            reader.addStatement("return result");
+            reader.addStatement("result.afterRead()")
+            reader.addStatement("return result")
         }
 
-        reader.endControlFlow();
-        writer.endControlFlow();
+        reader.endControlFlow()
+        writer.endControlFlow()
 
-        reader.addStatement("return null");
+        reader.addStatement("return null")
 
-        type.addMethod(writer.build());
-        type.addMethod(reader.build());
+        type.addFunction(writer.build())
+        type.addFunction(reader.build())
 
-        write(type);
+        FileSpec.builder(packageName, type.build().name.toString())
+            .addType(type.build())
+            .build()
+            .writeTo(codeGenerator, true)
+
+        return emptyList()
     }
 }

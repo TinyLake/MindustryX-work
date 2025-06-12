@@ -1,22 +1,20 @@
-package mindustry.annotations.remote;
+package mindustry.annotations.remote
 
-import arc.struct.*;
+import com.google.devtools.ksp.symbol.KSDeclaration
+import com.google.devtools.ksp.symbol.KSType
 
-import javax.lang.model.element.*;
-import javax.lang.model.type.*;
-
-public class SerializerResolver{
-
-    public static String locate(ExecutableElement elem, TypeMirror mirror, boolean write){
+object SerializerResolver {
+    fun locate(ksDeclaration: KSDeclaration, ksType: KSType, write: Boolean): String? {
         //generic type
-        if((mirror.toString().equals("T") && Seq.with(elem.getTypeParameters().get(0).getBounds()).contains(SerializerResolver::isEntity)) ||
-            isEntity(mirror)){
-            return write ? "mindustry.io.TypeIO.writeEntity" : "mindustry.io.TypeIO.readEntity";
+        if (((ksType.toString() == "T") && ksDeclaration.typeParameters[0].bounds.any { isEntity(it.resolve().toString()) } ) ||
+            isEntity(ksType.toString())
+        ) {
+            return if (write) "mindustry.io.TypeIO.writeEntity" else "mindustry.io.TypeIO.readEntity"
         }
-        return null;
+        return null
     }
 
-    private static boolean isEntity(TypeMirror mirror){
-        return !mirror.toString().contains(".") || mirror.toString().startsWith("mindustry.gen.") && !mirror.toString().startsWith("byte");
+    private fun isEntity(typeString: String): Boolean {
+        return !typeString.contains(".") || typeString.startsWith("mindustry.gen.") && !typeString.startsWith("byte")
     }
 }

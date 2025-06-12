@@ -1,0 +1,5 @@
+mindustry.annotations.impl.AssetsProcessorProvider
+mindustry.annotations.impl.StructProcessorProvider
+mindustry.annotations.misc.LoadRegionProcessorProvider
+mindustry.annotations.misc.LogicStatementProcessorProvider
+mindustry.annotations.remote.RemoteProcessorProvider

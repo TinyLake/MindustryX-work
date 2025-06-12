@@ -1,119 +1,131 @@
-package mindustry.annotations.misc;
+package mindustry.annotations.misc
 
-import arc.*;
-import arc.graphics.g2d.*;
-import arc.struct.*;
-import com.squareup.javapoet.*;
-import mindustry.annotations.Annotations.*;
-import mindustry.annotations.*;
-import mindustry.annotations.util.*;
+import arc.Core
+import arc.func.Prov
+import arc.graphics.g2d.TextureRegion
+import arc.struct.ObjectMap
+import arc.struct.Seq
+import com.google.devtools.ksp.isPublic
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.processing.SymbolProcessor
+import com.google.devtools.ksp.symbol.*
+import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.ksp.writeTo
+import mindustry.annotations.Annotations
+import mindustry.annotations.impl.StructProcessor.Companion.annotation
+import mindustry.annotations.util.Utils.err
+import mindustry.annotations.util.Utils.packageName
+import mindustry.annotations.util.Utils.typeName
 
-import javax.annotation.processing.*;
-import javax.lang.model.element.*;
+class LoadRegionProcessor(
+    val codeGenerator: CodeGenerator,
+    val logger: KSPLogger
+) : SymbolProcessor {
+    @Throws(Exception::class)
+    override fun process(resolver: Resolver): List<KSAnnotated> {
+        val regionClass = TypeSpec.objectBuilder("ContentRegions")
+            .addModifiers(KModifier.PUBLIC)
+        val method = FunSpec.builder("loadRegions")
+            .addParameter("content", typeName("mindustry.ctype.MappableContent"))
+            .addModifiers(KModifier.PUBLIC)
 
-@SupportedAnnotationTypes("mindustry.annotations.Annotations.Load")
-public class LoadRegionProcessor extends BaseProcessor{
+        val fieldMap = ObjectMap<TypeName, Seq<KSPropertyDeclaration>>()
 
-    @Override
-    public void process(RoundEnvironment env) throws Exception{
-        TypeSpec.Builder regionClass = TypeSpec.classBuilder("ContentRegions")
-            .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "\"deprecation\"").build())
-            .addModifiers(Modifier.PUBLIC);
-        MethodSpec.Builder method = MethodSpec.methodBuilder("loadRegions")
-            .addParameter(tname("mindustry.ctype.MappableContent"), "content")
-            .addModifiers(Modifier.STATIC, Modifier.PUBLIC);
-
-        ObjectMap<Stype, Seq<Svar>> fieldMap = new ObjectMap<>();
-
-        for(Svar field : fields(Load.class)){
-            if(!field.is(Modifier.PUBLIC)){
-                err("@LoadRegion field must be public", field);
+        resolver.getSymbolsWithAnnotation(Annotations.Load::class.java.canonicalName).forEach { field ->
+            if (!(field as KSPropertyDeclaration).isPublic()) {
+                logger.err("@LoadRegion field must be public", field as KSNode)
             }
 
-            fieldMap.get(field.enclosingType(), Seq::new).add(field);
+            fieldMap[typeName("${field.packageName.asString()}.${field.parent!!}"), Prov { Seq() }].add(field)
         }
 
-        Seq<Stype> entries = Seq.with(fieldMap.keys());
-        entries.sortComparing(e -> e.name());
+        val entries = Seq.with(fieldMap.keys())
+        entries.sortComparing { it.toString() }
 
-        for(Stype type : entries){
-            Seq<Svar> fields = fieldMap.get(type);
-            fields.sortComparing(s -> s.name());
-            method.beginControlFlow("if(content instanceof $L)", type.fullName());
+        entries.forEach { type ->
+            val fields = fieldMap[type]
+            fields.sortComparing { s -> s.simpleName.asString() }
+            method.beginControlFlow("if(content is %L)", type)
 
-            for(Svar field : fields){
-                Load an = field.annotation(Load.class);
+            for (field in fields) {
+                val an = field.annotation(Annotations.Load::class)!!
                 //get # of array dimensions
-                int dims = count(field.mirror().toString(), "[]");
-                boolean doFallback = !an.fallback().equals("error");
-                String fallbackString = doFallback ? ", " + parse(an.fallback()) : "";
+                val dims = count(field.type.toTypeName().toString(), "Array")
+                val doFallback = an.arguments[3].value.toString() != "error"
+                val fallbackString = if (doFallback) ", " + parse(an.arguments[3].value.toString()) else ""
 
                 //not an array
-                if(dims == 0){
-                    method.addStatement("(($L)content).$L = $T.atlas.find($L$L)", type.fullName(), field.name(), Core.class, parse(an.value()), fallbackString);
-                }else{
+                if (dims == 0) {
+                    method.addStatement("content.%L = %T.atlas.find(%L%L)", field.toString(), Core::class.java, parse(an.arguments[0].value.toString()), fallbackString)
+                } else {
                     //is an array, create length string
-                    int[] lengths = an.lengths();
-                    if(lengths.length == 0) lengths = new int[]{an.length()};
+                    var lengths = an.arguments.find { it.name!!.asString().contains("lengths") }!!.value as ArrayList<Int>
+                    if (lengths.isEmpty()) lengths = arrayListOf(an.arguments[1].value as Int)
 
-                    if(dims != lengths.length){
-                        err("Length dimensions must match array dimensions: " + dims + " != " + lengths.length, field);
+                    if (dims != lengths.size) {
+                        logger.err("Length dimensions must match array dimensions: " + dims + " != " + lengths.size, field)
                     }
 
-                    StringBuilder lengthString = new StringBuilder();
-                    for(int value : lengths) lengthString.append("[").append(value).append("]");
+                    method.addStatement("content.%L = ", field.toString())
+                    for (value in lengths) method.beginControlFlow("Array(%L)", value)
+                    method.addStatement("%T()", TextureRegion::class.java)
+                    for (value in lengths) method.endControlFlow()
 
-                    method.addStatement("(($T)content).$L = new $T$L", type.tname(), field.name(), TextureRegion.class, lengthString.toString());
-
-                    for(int i = 0; i < dims; i++){
-                        method.beginControlFlow("for(int INDEX$L = 0; INDEX$L < $L; INDEX$L ++)", i, i, lengths[i], i);
+                    for (i in 0 until dims) {
+                        method.beginControlFlow("for(INDEX%L in 0 until %L)", i, lengths[i])
                     }
 
-                    StringBuilder indexString = new StringBuilder();
-                    for(int i = 0; i < dims; i++){
-                        indexString.append("[INDEX").append(i).append("]");
+                    val indexString = StringBuilder()
+                    for (i in 0 until dims) {
+                        indexString.append("[INDEX").append(i).append("]")
                     }
 
-                    method.addStatement("(($T)content).$L$L = $T.atlas.find($L$L)", type.tname(), field.name(), indexString.toString(), Core.class, parse(an.value()), fallbackString);
+                    method.addStatement("content.%L%L = %T.atlas.find(%L%L)", field.toString(), indexString.toString(), Core::class.java, parse(an.arguments[0].value.toString()), fallbackString)
 
-                    for(int i = 0; i < dims; i++){
-                        method.endControlFlow();
+                    for (i in 0 until dims) {
+                        method.endControlFlow()
                     }
                 }
             }
 
-            method.endControlFlow();
+            method.endControlFlow()
         }
 
-        regionClass.addMethod(method.build());
+        regionClass.addFunction(method.build())
 
-        write(regionClass);
+        FileSpec.builder(packageName, regionClass.build().name!!).addType(regionClass.build()).build().writeTo(codeGenerator, true)
+
+        return emptyList()
     }
 
-    private static int count(String str, String substring){
-        int lastIndex = 0;
-        int count = 0;
+    private fun parse(value: String): String {
+        var value = value
+        value = '"'.toString() + value + '"'
+        value = value.replace("@size", "\" + ((mindustry.world.Block)content).size + \"")
+        value = value.replace("@", "\" + content.name + \"")
+        value = value.replace("#1", "\" + INDEX0 + \"")
+        value = value.replace("#2", "\" + INDEX1 + \"")
+        value = value.replace("#", "\" + INDEX0 + \"")
+        return value
+    }
 
-        while(lastIndex != -1){
+    companion object {
+        private fun count(str: String, substring: String): Int {
+            var lastIndex = 0
+            var count = 0
 
-            lastIndex = str.indexOf(substring, lastIndex);
+            while (lastIndex != -1) {
+                lastIndex = str.indexOf(substring, lastIndex)
 
-            if(lastIndex != -1){
-                count ++;
-                lastIndex += substring.length();
+                if (lastIndex != -1) {
+                    count++
+                    lastIndex += substring.length
+                }
             }
+            return count
         }
-        return count;
     }
-
-    private String parse(String value){
-        value = '"' + value + '"';
-        value = value.replace("@size", "\" + ((mindustry.world.Block)content).size + \"");
-        value = value.replace("@", "\" + content.name + \"");
-        value = value.replace("#1", "\" + INDEX0 + \"");
-        value = value.replace("#2", "\" + INDEX1 + \"");
-        value = value.replace("#", "\" + INDEX0 + \"");
-        return value;
-    }
-
 }

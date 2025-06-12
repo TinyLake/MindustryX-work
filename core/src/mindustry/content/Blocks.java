@@ -156,7 +156,7 @@ public class Blocks{
 
     //payloads
     payloadConveyor, payloadRouter, reinforcedPayloadConveyor, reinforcedPayloadRouter, payloadMassDriver, largePayloadMassDriver, smallDeconstructor, deconstructor, constructor, largeConstructor, payloadLoader, payloadUnloader,
-    
+
     //logic
     message, switchBlock, microProcessor, logicProcessor, hyperProcessor, largeLogicDisplay, logicDisplay, memoryCell, memoryBank,
     canvas, reinforcedMessage,
@@ -1280,7 +1280,7 @@ public class Blocks{
             itemCapacity = 0;
             consumePower(100f / 60f);
         }};
-        
+
         slagHeater = new HeatProducer("slag-heater"){{
             requirements(Category.crafting, with(Items.tungsten, 50, Items.oxide, 20, Items.beryllium, 20));
 
@@ -3420,7 +3420,7 @@ public class Blocks{
                     lightningLength = 10;
                 }}
             );
-            
+
             shoot = new ShootBarrel(){{
                 barrels = new float[]{
                     -4, -1.25f, 0,
@@ -5930,7 +5930,7 @@ public class Blocks{
 
         worldCell = new MemoryBlock("world-cell"){{
             requirements(Category.logic, BuildVisibility.editorOnly, with());
-            
+
             targetable = false;
             privileged = true;
             memoryCapacity = 128;
@@ -5939,7 +5939,7 @@ public class Blocks{
 
         worldMessage = new MessageBlock("world-message"){{
             requirements(Category.logic, BuildVisibility.editorOnly, with());
-            
+
             targetable = false;
             privileged = true;
         }};

@@ -1,7 +1,8 @@
-package mindustry.desktop.steam;
+package mindustry.desktop.steam
 
-import com.codedisaster.steamworks.*;
+import com.codedisaster.steamworks.SteamUser
+import com.codedisaster.steamworks.SteamUserCallback
 
-public class SUser implements SteamUserCallback{
-    public final SteamUser user = new SteamUser(this);
+class SUser : SteamUserCallback {
+    val user: SteamUser = SteamUser(this)
 }

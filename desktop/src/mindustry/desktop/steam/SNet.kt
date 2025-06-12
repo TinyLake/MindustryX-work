@@ -1,342 +1,348 @@
-package mindustry.desktop.steam;
+package mindustry.desktop.steam
 
-import arc.*;
-import arc.func.*;
-import arc.struct.*;
-import arc.util.*;
-import com.codedisaster.steamworks.*;
-import com.codedisaster.steamworks.SteamMatchmaking.*;
-import com.codedisaster.steamworks.SteamNetworking.*;
-import mindustry.core.*;
-import mindustry.game.EventType.*;
-import mindustry.game.*;
-import mindustry.net.ArcNetProvider.*;
-import mindustry.net.*;
-import mindustry.net.Net.*;
-import mindustry.net.Packets.*;
+import arc.ApplicationListener
+import arc.Core
+import arc.Events
+import arc.func.Cons
+import arc.struct.IntMap
+import arc.struct.Seq
+import arc.util.Log
+import arc.util.Strings
+import arc.util.Structs
+import com.codedisaster.steamworks.*
+import com.codedisaster.steamworks.SteamMatchmaking.*
+import com.codedisaster.steamworks.SteamNetworking.P2PSend
+import com.codedisaster.steamworks.SteamNetworking.P2PSessionError
+import mindustry.Vars
+import mindustry.core.Version
+import mindustry.game.EventType
+import mindustry.game.EventType.ClientLoadEvent
+import mindustry.game.EventType.WaveEvent
+import mindustry.game.Gamemode
+import mindustry.net.ArcNetProvider.PacketSerializer
+import mindustry.net.Host
+import mindustry.net.Net.NetProvider
+import mindustry.net.NetConnection
+import mindustry.net.Packet
+import mindustry.net.Packets.*
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.util.concurrent.CopyOnWriteArrayList
 
-import java.io.*;
-import java.nio.*;
-import java.util.concurrent.*;
+class SNet(val provider: NetProvider) : SteamNetworkingCallback, SteamMatchmakingCallback, SteamFriendsCallback, NetProvider {
+    val snet: SteamNetworking = SteamNetworking(this)
+    val smat: SteamMatchmaking = SteamMatchmaking(this)
+    val friends: SteamFriends = SteamFriends(this)
 
-import static mindustry.Vars.*;
+    val serializer: PacketSerializer = PacketSerializer()
+    val writeBuffer: ByteBuffer = ByteBuffer.allocateDirect(16384)
+    val readBuffer: ByteBuffer = ByteBuffer.allocateDirect(16384)
+    val readCopyBuffer: ByteBuffer = ByteBuffer.allocate(writeBuffer.capacity())
 
-public class SNet implements SteamNetworkingCallback, SteamMatchmakingCallback, SteamFriendsCallback, NetProvider{
-    public final SteamNetworking snet = new SteamNetworking(this);
-    public final SteamMatchmaking smat = new SteamMatchmaking(this);
-    public final SteamFriends friends = new SteamFriends(this);
+    val connections: CopyOnWriteArrayList<SteamConnection> = CopyOnWriteArrayList()
+    val steamConnections: IntMap<SteamConnection> = IntMap() //maps steam ID -> valid net connection
 
-    final NetProvider provider;
+    var currentLobby: SteamID? = null
+    var currentServer: SteamID? = null
+    var lobbyCallback: Cons<Host>? = null
+    var lobbyDoneCallback: Runnable? = null
+    var joinCallback: Runnable? = null
 
-    final PacketSerializer serializer = new PacketSerializer();
-    final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(16384);
-    final ByteBuffer readBuffer = ByteBuffer.allocateDirect(16384);
-    final ByteBuffer readCopyBuffer = ByteBuffer.allocate(writeBuffer.capacity());
+    init {
+        Events.on(ClientLoadEvent::class.java) { e: ClientLoadEvent? ->
+            Core.app.addListener(object : ApplicationListener {
+                //read packets
+                var length: Int = 0
+                var from: SteamID = SteamID()
 
-    final CopyOnWriteArrayList<SteamConnection> connections = new CopyOnWriteArrayList<>();
-    final IntMap<SteamConnection> steamConnections = new IntMap<>(); //maps steam ID -> valid net connection
+                override fun update() {
+                    while ((snet.isP2PPacketAvailable(0).also { length = it }) != 0) {
+                        try {
+                            readBuffer.position(0).limit(readBuffer.capacity())
+                            //lz4 chokes on direct buffers, so copy the bytes over
+                            val len: Int = snet.readP2PPacket(from, readBuffer, 0)
+                            readBuffer.limit(len)
+                            readCopyBuffer.position(0)
+                            readCopyBuffer.put(readBuffer)
+                            readCopyBuffer.position(0)
+                            val fromID: Int = from.accountID
+                            val output: Any = serializer.read(readCopyBuffer)
 
-    SteamID currentLobby, currentServer;
-    Cons<Host> lobbyCallback;
-    Runnable lobbyDoneCallback, joinCallback;
+                            //it may be theoretically possible for this to be a framework message, if the packet is malicious or corrupted
+                            if (output !is Packet) return
 
-    public SNet(NetProvider provider){
-        this.provider = provider;
+                            val pack: Packet = output as Packet
 
-        Events.on(ClientLoadEvent.class, e -> Core.app.addListener(new ApplicationListener(){
-            //read packets
-            int length;
-            SteamID from = new SteamID();
+                            if (Vars.net.server()) {
+                                var con: SteamConnection? = steamConnections.get(fromID)
+                                try {
+                                    //accept users on request
+                                    if (con == null) {
+                                        con = SteamConnection(SteamID.createFromNativeHandle(from.handle()))
+                                        val c: Connect = Connect()
+                                        c.addressTCP = "steam:" + from.getAccountID()
 
-            @Override
-            public void update(){
-                while((length = snet.isP2PPacketAvailable(0)) != 0){
-                    try{
-                        readBuffer.position(0).limit(readBuffer.capacity());
-                        //lz4 chokes on direct buffers, so copy the bytes over
-                        int len = snet.readP2PPacket(from, readBuffer, 0);
-                        readBuffer.limit(len);
-                        readCopyBuffer.position(0);
-                        readCopyBuffer.put(readBuffer);
-                        readCopyBuffer.position(0);
-                        int fromID = from.getAccountID();
-                        Object output = serializer.read(readCopyBuffer);
+                                        Log.info("&bReceived STEAM connection: @", c.addressTCP)
 
-                        //it may be theoretically possible for this to be a framework message, if the packet is malicious or corrupted
-                        if(!(output instanceof Packet)) return;
+                                        steamConnections.put(from.getAccountID(), con)
+                                        connections.add(con)
+                                        Vars.net.handleServerReceived(con, c)
+                                    }
 
-                        Packet pack = (Packet)output;
-
-                        if(net.server()){
-                            SteamConnection con = steamConnections.get(fromID);
-                            try{
-                                //accept users on request
-                                if(con == null){
-                                    con = new SteamConnection(SteamID.createFromNativeHandle(from.handle()));
-                                    Connect c = new Connect();
-                                    c.addressTCP = "steam:" + from.getAccountID();
-
-                                    Log.info("&bReceived STEAM connection: @", c.addressTCP);
-
-                                    steamConnections.put(from.getAccountID(), con);
-                                    connections.add(con);
-                                    net.handleServerReceived(con, c);
+                                    Vars.net.handleServerReceived(con, pack)
+                                } catch (e: Throwable) {
+                                    Log.err(e)
                                 }
-
-                                net.handleServerReceived(con, pack);
-                            }catch(Throwable e){
-                                Log.err(e);
+                            } else if (currentServer != null && fromID == currentServer!!.getAccountID()) {
+                                try {
+                                    Vars.net.handleClientReceived(pack)
+                                } catch (t: Throwable) {
+                                    Vars.net.handleException(t)
+                                }
                             }
-                        }else if(currentServer != null && fromID == currentServer.getAccountID()){
-                            try{
-                                net.handleClientReceived(pack);
-                            }catch(Throwable t){
-                                net.handleException(t);
+                        } catch (e: Exception) {
+                            if (Vars.net.server()) {
+                                Log.err(e)
+                            } else {
+                                Vars.net.showError(e)
                             }
-                        }
-                    }catch(Exception e){
-                        if(net.server()){
-                            Log.err(e);
-                        }else{
-                            net.showError(e);
                         }
                     }
                 }
-            }
-        }));
+            })
+        }
 
-        Events.on(WaveEvent.class, e -> updateWave());
-        Events.run(Trigger.newGame, this::updateWave);
-
-        Events.on(PlayerIpBanEvent.class, e -> updateBans(e.ip));
-        Events.on(PlayerIpUnbanEvent.class, e -> updateBans(e.ip));
+        Events.on(WaveEvent::class.java, { e: WaveEvent? -> updateWave() })
+        Events.run(EventType.Trigger.newGame, { this.updateWave() })
     }
 
-    public boolean isSteamClient(){
-        return currentServer != null;
-    }
+    val isSteamClient: Boolean
+        get() = currentServer != null
 
-    @Override
-    public void connectClient(String ip, int port, Runnable success) throws IOException{
-        if(ip.startsWith("steam:")){
-            String lobbyname = ip.substring("steam:".length());
-            try{
-                SteamID lobby = SteamID.createFromNativeHandle(Long.parseLong(lobbyname));
-                joinCallback = success;
-                smat.joinLobby(lobby);
-            }catch(NumberFormatException e){
-                throw new IOException("Invalid Steam ID: " + lobbyname);
+    @Throws(IOException::class)
+    override fun connectClient(ip: String, port: Int, success: Runnable) {
+        if (ip.startsWith("steam:")) {
+            val lobbyname = ip.substring("steam:".length)
+            try {
+                val lobby = SteamID.createFromNativeHandle(lobbyname.toLong())
+                joinCallback = success
+                smat.joinLobby(lobby)
+            } catch (e: NumberFormatException) {
+                throw IOException("Invalid Steam ID: $lobbyname")
             }
-        }else{
-            provider.connectClient(ip, port, success);
+        } else {
+            provider.connectClient(ip, port, success)
         }
     }
 
-    @Override
-    public void sendClient(Object object, boolean reliable){
-        if(isSteamClient()){
-            if(currentServer == null){
-                Log.info("Not connected, quitting.");
-                return;
+    override fun sendClient(`object`: Any, reliable: Boolean) {
+        if (isSteamClient) {
+            if (currentServer == null) {
+                Log.info("Not connected, quitting.")
+                return
             }
 
-            try{
-                writeBuffer.limit(writeBuffer.capacity());
-                writeBuffer.position(0);
-                serializer.write(writeBuffer, object);
-                int length = writeBuffer.position();
-                writeBuffer.flip();
+            try {
+                writeBuffer.limit(writeBuffer.capacity())
+                writeBuffer.position(0)
+                serializer.write(writeBuffer, `object`)
+                val length = writeBuffer.position()
+                writeBuffer.flip()
 
-                snet.sendP2PPacket(currentServer, writeBuffer, reliable || length >= 1000 ? P2PSend.Reliable : P2PSend.UnreliableNoDelay, 0);
-            }catch(Exception e){
-                net.showError(e);
+                snet.sendP2PPacket(currentServer, writeBuffer, if (reliable || length >= 1000) P2PSend.Reliable else P2PSend.UnreliableNoDelay, 0)
+            } catch (e: Exception) {
+                Vars.net.showError(e)
             }
-        }else{
-            provider.sendClient(object, reliable);
+        } else {
+            provider.sendClient(`object`, reliable)
         }
     }
 
-    @Override
-    public void disconnectClient(){
-        if(isSteamClient()){
-            if(currentLobby != null){
-                smat.leaveLobby(currentLobby);
-                snet.closeP2PSessionWithUser(currentServer);
-                currentServer = null;
-                currentLobby = null;
-                net.handleClientReceived(new Disconnect());
+    override fun disconnectClient() {
+        if (isSteamClient) {
+            if (currentLobby != null) {
+                smat.leaveLobby(currentLobby)
+                snet.closeP2PSessionWithUser(currentServer)
+                currentServer = null
+                currentLobby = null
+                Vars.net.handleClientReceived(Disconnect())
             }
-        }else{
-            provider.disconnectClient();
+        } else {
+            provider.disconnectClient()
         }
     }
 
-    @Override
-    public void discoverServers(Cons<Host> callback, Runnable done){
-        smat.addRequestLobbyListResultCountFilter(32);
-        smat.addRequestLobbyListDistanceFilter(LobbyDistanceFilter.Worldwide);
-        smat.requestLobbyList();
-        lobbyCallback = callback;
+    override fun discoverServers(callback: Cons<Host>, done: Runnable) {
+        smat.addRequestLobbyListResultCountFilter(32)
+        smat.addRequestLobbyListDistanceFilter(LobbyDistanceFilter.Worldwide)
+        smat.requestLobbyList()
+        lobbyCallback = callback
 
         //after the steam lobby is done discovering, look for local network servers.
-        lobbyDoneCallback = () -> provider.discoverServers(callback, done);
+        lobbyDoneCallback = Runnable { provider.discoverServers(callback, done) }
     }
 
-    @Override
-    public void pingHost(String address, int port, Cons<Host> valid, Cons<Exception> failed){
-        provider.pingHost(address, port, valid, failed);
+    override fun pingHost(address: String, port: Int, valid: Cons<Host>, failed: Cons<Exception>) {
+        provider.pingHost(address, port, valid, failed)
     }
 
-    @Override
-    public void hostServer(int port) throws IOException{
-        provider.hostServer(port);
-        smat.createLobby(Core.settings.getBool("steampublichost") ? LobbyType.Public : LobbyType.FriendsOnly, Core.settings.getInt("playerlimit"));
+    @Throws(IOException::class)
+    override fun hostServer(port: Int) {
+        provider.hostServer(port)
+        smat.createLobby(if (Core.settings.getBool("steampublichost")) LobbyType.Public else LobbyType.FriendsOnly, Core.settings.getInt("playerlimit"))
 
-        Core.app.post(() -> Core.app.post(() -> Core.app.post(() -> Log.info("Server: @\nClient: @\nActive: @", net.server(), net.client(), net.active()))));
-    }
-
-    public void updateLobby(){
-        if(currentLobby != null && net.server()){
-            smat.setLobbyType(currentLobby, Core.settings.getBool("steampublichost") ? LobbyType.Public : LobbyType.FriendsOnly);
-            smat.setLobbyMemberLimit(currentLobby, Core.settings.getInt("playerlimit"));
-        }
-    }
-    
-    void updateWave(){
-        if(currentLobby != null && net.server()){
-            smat.setLobbyData(currentLobby, "mapname", state.map.name());
-            smat.setLobbyData(currentLobby, "wave", state.wave + "");
-            smat.setLobbyData(currentLobby, "gamemode", state.rules.mode().name() + "");
-        }
-    }
-
-    /** Updates the ban list so that lobbies don't appear for banned players. The list will only be updated when a steam player is banned/unbanned. */
-    void updateBans(String changed){
-        if(changed != null && !changed.startsWith("steam:")) return; //hacky way to ignore non-steam ids
-        smat.setLobbyData(currentLobby, "banned", netServer.admins.bannedIPs.select(ip -> ip.contains("steam:")).reduce(new StringBuilder(), (ip, str) -> str.append(ip.substring(6)).append(',')).toString()); //list of handles split by commas
-    }
-
-    @Override
-    public void closeServer(){
-        provider.closeServer();
-
-        if(currentLobby != null){
-            smat.leaveLobby(currentLobby);
-            for(SteamConnection con : steamConnections.values()){
-                con.close();
+        Core.app.post {
+            Core.app.post {
+                Core.app.post {
+                    Log.info(
+                        "Server: @\nClient: @\nActive: @",
+                        Vars.net.server(),
+                        Vars.net.client(),
+                        Vars.net.active()
+                    )
+                }
             }
-            currentLobby = null;
         }
-
-        steamConnections.clear();
     }
 
-    @Override
-    public Iterable<? extends NetConnection> getConnections(){
+    fun updateLobby() {
+        if (currentLobby != null && Vars.net.server()) {
+            smat.setLobbyType(currentLobby, if (Core.settings.getBool("steampublichost")) LobbyType.Public else LobbyType.FriendsOnly)
+            smat.setLobbyMemberLimit(currentLobby, Core.settings.getInt("playerlimit"))
+        }
+    }
+
+    fun updateWave() {
+        if (currentLobby != null && Vars.net.server()) {
+            smat.setLobbyData(currentLobby, "mapname", Vars.state.map.name())
+            smat.setLobbyData(currentLobby, "wave", Vars.state.wave.toString() + "")
+            smat.setLobbyData(currentLobby, "gamemode", Vars.state.rules.mode().name + "")
+        }
+    }
+
+    override fun closeServer() {
+        provider.closeServer()
+
+        if (currentLobby != null) {
+            smat.leaveLobby(currentLobby)
+            for (con: SteamConnection in steamConnections.values()) {
+                con.close()
+            }
+            currentLobby = null
+        }
+
+        steamConnections.clear()
+    }
+
+    override fun getConnections(): Iterable<NetConnection> {
         //merge provider connections
-        CopyOnWriteArrayList<NetConnection> connectionsOut = new CopyOnWriteArrayList<>(connections);
-        for(NetConnection c : provider.getConnections()) connectionsOut.add(c);
-        return connectionsOut;
+        val connectionsOut = CopyOnWriteArrayList<NetConnection>(connections)
+        for (c: NetConnection in provider.connections) connectionsOut.add(c)
+        return connectionsOut
     }
 
-    void disconnectSteamUser(SteamID steamid){
+    fun disconnectSteamUser(steamid: SteamID) {
         //a client left
-        int sid = steamid.getAccountID();
-        snet.closeP2PSessionWithUser(steamid);
+        val sid = steamid.accountID
+        snet.closeP2PSessionWithUser(steamid)
 
-        if(steamConnections.containsKey(sid)){
-            SteamConnection con = steamConnections.get(sid);
-            net.handleServerReceived(con, new Disconnect());
-            steamConnections.remove(sid);
-            connections.remove(con);
+        if (steamConnections.containsKey(sid)) {
+            val con = steamConnections[sid]
+            Vars.net.handleServerReceived(con, Disconnect())
+            steamConnections.remove(sid)
+            connections.remove(con)
         }
     }
 
-    @Override
-    public void onLobbyInvite(SteamID steamIDUser, SteamID steamIDLobby, long gameID){
-        Log.info("onLobbyInvite @ @ @", steamIDLobby.getAccountID(), steamIDUser.getAccountID(), gameID);
+    override fun onLobbyInvite(steamIDUser: SteamID, steamIDLobby: SteamID, gameID: Long) {
+        Log.info("onLobbyInvite @ @ @", steamIDLobby.accountID, steamIDUser.accountID, gameID)
     }
 
-    @Override
-    public void onLobbyEnter(SteamID steamIDLobby, int chatPermissions, boolean blocked, ChatRoomEnterResponse response){
-        Log.info("onLobbyEnter @ @", steamIDLobby.getAccountID(), response);
+    override fun onLobbyEnter(steamIDLobby: SteamID, chatPermissions: Int, blocked: Boolean, response: ChatRoomEnterResponse) {
+        Log.info("onLobbyEnter @ @", steamIDLobby.accountID, response)
 
-        if(response != ChatRoomEnterResponse.Success){
-            ui.loadfrag.hide();
-            ui.showErrorMessage(Core.bundle.format("cantconnect", response.toString()));
-            return;
+        if (response != ChatRoomEnterResponse.Success) {
+            Vars.ui.loadfrag.hide()
+            Vars.ui.showErrorMessage(Core.bundle.format("cantconnect", response.toString()))
+            return
         }
 
-        int version = Strings.parseInt(smat.getLobbyData(steamIDLobby, "version"), -1);
+        val version = Strings.parseInt(smat.getLobbyData(steamIDLobby, "version"), -1)
 
         //check version
-        if(version != Version.build){
-            ui.loadfrag.hide();
-            ui.showInfo("[scarlet]" + (version > Version.build ? KickReason.clientOutdated : KickReason.serverOutdated) + "\n[]" +
-                Core.bundle.format("server.versions", Version.build, version));
-            smat.leaveLobby(steamIDLobby);
-            return;
+        if (version != Version.build) {
+            Vars.ui.loadfrag.hide()
+            Vars.ui.showInfo(
+                "[scarlet]" + (if (version > Version.build) KickReason.clientOutdated else KickReason.serverOutdated).toString() + "\n[]" +
+                        Core.bundle.format("server.versions", Version.build, version)
+            )
+            smat.leaveLobby(steamIDLobby)
+            return
         }
 
-        logic.reset();
-        net.reset();
+        Vars.logic.reset()
+        Vars.net.reset()
 
-        currentLobby = steamIDLobby;
-        currentServer = smat.getLobbyOwner(steamIDLobby);
+        currentLobby = steamIDLobby
+        currentServer = smat.getLobbyOwner(steamIDLobby)
 
-        Log.info("Connect to owner @: @", currentServer.getAccountID(), friends.getFriendPersonaName(currentServer));
+        Log.info("Connect to owner @: @", (currentServer as SteamID).getAccountID(), friends.getFriendPersonaName(currentServer))
 
-        if(joinCallback != null){
-            joinCallback.run();
-            joinCallback = null;
+        if (joinCallback != null) {
+            joinCallback!!.run()
+            joinCallback = null
         }
 
-        Connect con = new Connect();
-        con.addressTCP = "steam:" + currentServer.getAccountID();
+        val con = Connect()
+        con.addressTCP = "steam:" + (currentServer as SteamID).getAccountID()
 
-        net.setClientConnected();
-        net.handleClientReceived(con);
+        Vars.net.setClientConnected()
+        Vars.net.handleClientReceived(con)
 
-        Core.app.post(() -> Core.app.post(() -> Core.app.post(() -> Log.info("Server: @\nClient: @\nActive: @", net.server(), net.client(), net.active()))));
-    }
-
-    @Override
-    public void onLobbyChatUpdate(SteamID lobby, SteamID who, SteamID changer, ChatMemberStateChange change){
-        Log.info("lobby @: @ caused @'s change: @", lobby.getAccountID(), who.getAccountID(), changer.getAccountID(), change);
-        if(change == ChatMemberStateChange.Disconnected || change == ChatMemberStateChange.Left){
-            if(net.client()){
-                //host left, leave as well
-                if(who.equals(currentServer) || who.equals(currentLobby)){
-                    net.disconnect();
-                    Log.info("Current host left.");
+        Core.app.post {
+            Core.app.post {
+                Core.app.post {
+                    Log.info(
+                        "Server: @\nClient: @\nActive: @",
+                        Vars.net.server(),
+                        Vars.net.client(),
+                        Vars.net.active()
+                    )
                 }
-            }else{
-                //a client left
-                disconnectSteamUser(who);
             }
         }
     }
 
-    @Override
-    public void onLobbyMatchList(int matches){
-        Log.info("found @ matches", matches);
+    override fun onLobbyChatUpdate(lobby: SteamID, who: SteamID, changer: SteamID, change: ChatMemberStateChange) {
+        Log.info("lobby @: @ caused @'s change: @", lobby.accountID, who.accountID, changer.accountID, change)
+        if (change == ChatMemberStateChange.Disconnected || change == ChatMemberStateChange.Left) {
+            if (Vars.net.client()) {
+                //host left, leave as well
+                if ((who == currentServer) || (who == currentLobby)) {
+                    Vars.net.disconnect()
+                    Log.info("Current host left.")
+                }
+            } else {
+                //a client left
+                disconnectSteamUser(who)
+            }
+        }
+    }
 
-        if(lobbyDoneCallback != null){
-            Seq<Host> hosts = new Seq<>();
-            for(int i = 0; i < matches; i++){
-                try{
-                    SteamID lobby = smat.getLobbyByIndex(i);
-                    if(smat.getLobbyData(lobby, "hidden").equals("true")) continue;
-                    String mode = smat.getLobbyData(lobby, "gamemode");
+    override fun onLobbyMatchList(matches: Int) {
+        Log.info("found @ matches", matches)
+
+        if (lobbyDoneCallback != null) {
+            val hosts = Seq<Host>()
+            for (i in 0 until matches) {
+                try {
+                    val lobby = smat.getLobbyByIndex(i)
+                    if ((smat.getLobbyData(lobby, "hidden") == "true")) continue
+                    val mode = smat.getLobbyData(lobby, "gamemode")
                     //make sure versions are equal, don't list incompatible lobbies
-                    if(mode == null || mode.isEmpty() || (Version.build != -1 && Strings.parseInt(smat.getLobbyData(lobby, "version"), -1) != Version.build)) continue;
-
-                    String banList = smat.getLobbyData(lobby, "banned");
-
-                    boolean banned = banList.length() > 0 && Structs.contains(banList.split(","), SVars.user.user.getSteamID().getAccountID() + "");
-
-                    Host out = new Host(
-                        -1, //invalid ping
+                    if ((mode == null) || mode.isEmpty() || (Version.build != -1 && Strings.parseInt(smat.getLobbyData(lobby, "version"), -1) != Version.build)) continue
+                    val out = Host(
+                        -1,  //invalid ping
                         smat.getLobbyData(lobby, "name"),
                         "steam:" + lobby.handle(),
                         smat.getLobbyData(lobby, "mapname"),
@@ -346,121 +352,103 @@ public class SNet implements SteamNetworkingCallback, SteamMatchmakingCallback, 
                         smat.getLobbyData(lobby, "versionType"),
                         Gamemode.valueOf(mode),
                         smat.getLobbyMemberLimit(lobby),
-                        banned ? "[banned]" : "",
+                        "",
                         null
-                    );
-                    hosts.add(out);
-                }catch(Exception e){
-                    Log.err(e);
+                    )
+                    hosts.add(out)
+                } catch (e: Exception) {
+                    Log.err(e)
                 }
             }
 
-            hosts.sort(Structs.comparingInt(h -> -h.players));
-            hosts.each(lobbyCallback);
+            hosts.sort(Structs.comparingInt({ h: Host -> -h.players }))
+            hosts.each(lobbyCallback)
 
-            lobbyDoneCallback.run();
+            lobbyDoneCallback!!.run()
         }
     }
 
-    @Override
-    public void onLobbyCreated(SteamResult result, SteamID steamID){
-        if(!net.server()){
-            Log.info("Lobby created on server: @, ignoring.", steamID);
-            return;
+    override fun onLobbyCreated(result: SteamResult, steamID: SteamID) {
+        if (!Vars.net.server()) {
+            Log.info("Lobby created on server: @, ignoring.", steamID)
+            return
         }
 
-        Log.info("Lobby @ created? @", result, steamID.getAccountID());
-        if(result == SteamResult.OK){
-            currentLobby = steamID;
+        Log.info("Lobby @ created? @", result, steamID.accountID)
+        if (result == SteamResult.OK) {
+            currentLobby = steamID
 
-            smat.setLobbyData(steamID, "name", player.name);
-            smat.setLobbyData(steamID, "mapname", state.map.name());
-            smat.setLobbyData(steamID, "version", Version.build + "");
-            smat.setLobbyData(steamID, "versionType", Version.type);
-            smat.setLobbyData(steamID, "wave", state.wave + "");
-            smat.setLobbyData(steamID, "gamemode", state.rules.mode().name() + "");
-            updateBans(null);
+            smat.setLobbyData(steamID, "name", Vars.player.name)
+            smat.setLobbyData(steamID, "mapname", Vars.state.map.name())
+            smat.setLobbyData(steamID, "version", Version.build.toString() + "")
+            smat.setLobbyData(steamID, "versionType", Version.type)
+            smat.setLobbyData(steamID, "wave", Vars.state.wave.toString() + "")
+            smat.setLobbyData(steamID, "gamemode", Vars.state.rules.mode().name + "")
         }
     }
 
-    public void showFriendInvites(){
-        if(currentLobby != null){
-            friends.activateGameOverlayInviteDialog(currentLobby);
-            Log.info("Activating overlay dialog");
+    fun showFriendInvites() {
+        if (currentLobby != null) {
+            friends.activateGameOverlayInviteDialog(currentLobby)
+            Log.info("Activating overlay dialog")
         }
     }
 
-    @Override
-    public void onP2PSessionConnectFail(SteamID steamIDRemote, P2PSessionError sessionError){
-        if(net.server()){
-            Log.info("@ has disconnected: @", steamIDRemote.getAccountID(), sessionError);
-            disconnectSteamUser(steamIDRemote);
-        }else if(steamIDRemote.equals(currentServer)){
-            Log.info("Disconnected! @: @", steamIDRemote.getAccountID(), sessionError);
-            net.handleClientReceived(new Disconnect());
+    override fun onP2PSessionConnectFail(steamIDRemote: SteamID, sessionError: P2PSessionError) {
+        if (Vars.net.server()) {
+            Log.info("@ has disconnected: @", steamIDRemote.accountID, sessionError)
+            disconnectSteamUser(steamIDRemote)
+        } else if ((steamIDRemote == currentServer)) {
+            Log.info("Disconnected! @: @", steamIDRemote.accountID, sessionError)
+            Vars.net.handleClientReceived(Disconnect())
         }
     }
 
-    @Override
-    public void onP2PSessionRequest(SteamID steamIDRemote){
-        Log.info("Connection request: @", steamIDRemote.getAccountID());
-        if(net.server()){
-            Log.info("Am server, accepting request from " + steamIDRemote.getAccountID());
-            snet.acceptP2PSessionWithUser(steamIDRemote);
+    override fun onP2PSessionRequest(steamIDRemote: SteamID) {
+        Log.info("Connection request: @", steamIDRemote.accountID)
+        if (Vars.net.server()) {
+            Log.info("Am server, accepting request from " + steamIDRemote.accountID)
+            snet.acceptP2PSessionWithUser(steamIDRemote)
         }
     }
 
-    @Override
-    public void onGameLobbyJoinRequested(SteamID lobby, SteamID steamIDFriend){
-        Log.info("onGameLobbyJoinRequested @ @", lobby, steamIDFriend);
-        smat.joinLobby(lobby);
+    override fun onGameLobbyJoinRequested(lobby: SteamID, steamIDFriend: SteamID) {
+        Log.info("onGameLobbyJoinRequested @ @", lobby, steamIDFriend)
+        smat.joinLobby(lobby)
     }
 
-    public class SteamConnection extends NetConnection{
-        final SteamID sid;
-
-        public SteamConnection(SteamID sid){
-            super("steam:" + sid.getAccountID());
-            this.sid = sid;
-            Log.info("Created STEAM connection: @", sid.getAccountID());
+    inner class SteamConnection(val sid: SteamID) : NetConnection(sid.accountID.toString() + "") {
+        init {
+            Log.info("Created STEAM connection: @", sid.accountID)
         }
 
-        @Override
-        public void send(Object object, boolean reliable){
-            try{
-                writeBuffer.limit(writeBuffer.capacity());
-                writeBuffer.position(0);
-                serializer.write(writeBuffer, object);
-                int length = writeBuffer.position();
-                writeBuffer.flip();
+        override fun send(`object`: Any, reliable: Boolean) {
+            try {
+                writeBuffer.limit(writeBuffer.capacity())
+                writeBuffer.position(0)
+                serializer.write(writeBuffer, `object`)
+                val length = writeBuffer.position()
+                writeBuffer.flip()
 
-                snet.sendP2PPacket(sid, writeBuffer, reliable || length >= 1000 ? object instanceof StreamChunk ? P2PSend.ReliableWithBuffering : P2PSend.Reliable : P2PSend.UnreliableNoDelay, 0);
-            }catch(Exception e){
-                Log.err(e);
-                Log.info("Error sending packet. Disconnecting invalid client!");
-                close();
+                snet.sendP2PPacket(sid, writeBuffer, if (reliable || length >= 1000) if (`object` is StreamChunk) P2PSend.ReliableWithBuffering else P2PSend.Reliable else P2PSend.UnreliableNoDelay, 0)
+            } catch (e: Exception) {
+                Log.err(e)
+                Log.info("Error sending packet. Disconnecting invalid client!")
+                close()
 
-                SteamConnection k = steamConnections.get(sid.getAccountID());
-                if(k != null) steamConnections.remove(sid.getAccountID());
+                val k = steamConnections[sid.accountID]
+                if (k != null) steamConnections.remove(sid.accountID)
             }
         }
 
-        @Override
-        public boolean isConnected(){
+        override fun isConnected(): Boolean {
             //TODO ???
             //snet.getP2PSessionState(sid, state);
-            return true;//state.isConnectionActive();
+            return true //state.isConnectionActive();
         }
 
-        @Override
-        protected void kickDisconnect(){
-            //delay the close so the kick packet can be sent on steam
-            Time.runTask(10f, this::close);
-        }
-
-        @Override
-        public void close(){
-            disconnectSteamUser(sid);
+        override fun close() {
+            disconnectSteamUser(sid)
         }
     }
 }

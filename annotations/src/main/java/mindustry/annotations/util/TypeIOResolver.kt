@@ -1,66 +1,64 @@
-package mindustry.annotations.util;
+package mindustry.annotations.util
 
-import arc.struct.*;
-import mindustry.annotations.Annotations.*;
-import mindustry.annotations.*;
-
-import javax.lang.model.element.*;
+import com.google.devtools.ksp.getDeclaredFunctions
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.Modifier
+import com.squareup.kotlinpoet.ksp.toTypeName
+import mindustry.annotations.Annotations.TypeIOHandler
 
 /**
  * This class finds reader and writer methods.
  */
-public class TypeIOResolver{
-
+object TypeIOResolver {
     /**
      * Finds all class serializers for all types and returns them. Logs errors when necessary.
      * Maps fully qualified class names to their serializers.
      */
-    public static ClassSerializer resolve(BaseProcessor processor){
-        ClassSerializer out = new ClassSerializer(new ObjectMap<>(), new ObjectMap<>(), new ObjectMap<>(), new ObjectMap<>());
-        for(Stype type : processor.types(TypeIOHandler.class)){
-            //look at all TypeIOHandler methods
-            Seq<Smethod> methods = type.methods();
-            for(Smethod meth : methods){
-                if(meth.is(Modifier.PUBLIC) && meth.is(Modifier.STATIC)){
-                    Seq<Svar> params = meth.params();
-                    //2 params, second one is type, first is writer
-                    if(params.size == 2 && params.first().tname().toString().equals("arc.util.io.Writes")){
-                        //Net suffix indicates that this should only be used for sync operations
-                        ObjectMap<String, String> targetMap = meth.name().endsWith("Net") ? out.netWriters : out.writers;
+    fun resolve(resolver: Resolver): ClassSerializer {
+        val out = ClassSerializer(mutableMapOf(), mutableMapOf(), mutableMapOf(), mutableMapOf())
+        resolver.getSymbolsWithAnnotation(TypeIOHandler::class.java.canonicalName)
+            .filterIsInstance<KSClassDeclaration>()
+            .forEach { declaration ->
+                //look at all TypeIOHandler methods
+                declaration.getDeclaredFunctions()
+                    .filter { it.simpleName.asString() !in setOf("<init>", "<clinit>") }
+                    .forEach { method ->
+                        if (method.modifiers.contains(Modifier.PUBLIC) && method.modifiers.contains(Modifier.JAVA_STATIC)) {
+                            val params = method.parameters
+                            //2 params, second one is declaration, first is writer
+                            if (params.size == 2 && params.first().type.toTypeName().toString() == "arc.util.io.Writes") {
+                                //Net suffix indicates that this should only be used for sync operations
+                                val targetMap = if (method.simpleName.asString().endsWith("Net")) out.netWriters else out.writers
 
-                        targetMap.put(fix(params.get(1).tname().toString()), type.fullName() + "." + meth.name());
-                    }else if(params.size == 1 && params.first().tname().toString().equals("arc.util.io.Reads") && !meth.isVoid()){
-                        //1 param, one is reader, returns type
-                        out.readers.put(fix(meth.retn().toString()), type.fullName() + "." + meth.name());
-                    }else if(params.size == 2 && params.first().tname().toString().equals("arc.util.io.Reads") && !meth.isVoid() && meth.ret().equals(meth.params().get(1).mirror())){
-                        //2 params, one is reader, other is type, returns type - these are made to reduce garbage allocated
-                        out.mutatorReaders.put(fix(meth.retn().toString()), type.fullName() + "." + meth.name());
+                                //logger.err(method.simpleName.asString())
+                                //logger.err(params[1].type.toString())
+                                //TODO because the type is not resolved, the type name is not correct
+
+                                targetMap[fix(params[1].type.toTypeName().toString())] = declaration.qualifiedName?.asString() + "." + method.simpleName.asString()
+                            } else if (params.size == 1 && params.first().type.toTypeName().toString() == "arc.util.io.Reads" && method.returnType?.toTypeName().toString() != "void") {
+                                //1 param, one is reader, returns declaration
+                                out.readers[fix(method.returnType.toString())] = declaration.qualifiedName?.asString() + "." + method.simpleName.asString()
+                            } else if (params.size == 2 && params.first().type.toTypeName().toString() == "arc.util.io.Reads" && method.returnType?.toTypeName().toString() == "void" && method.returnType == method.parameters[1].type) {
+                                //2 params, one is reader, other is declaration, returns declaration - these are made to reduce garbage allocated
+                                out.mutatorReaders[fix(method.returnType.toString())] = declaration.qualifiedName?.asString() + "." + method.simpleName.asString()
+                            }
+                        }
                     }
-                }
             }
-        }
 
-        return out;
+        return out
     }
 
-    /** makes sure type names don't contain 'gen' */
-    private static String fix(String str){
-        return str.replace("mindustry.gen", "");
+    /** makes sure type names don't contain 'gen'  */
+    private fun fix(str: String): String {
+        return str.replace("mindustry.gen", "")
     }
 
-    /** Information about read/write methods for class types. */
-    public static class ClassSerializer{
-        public final ObjectMap<String, String> writers, readers, mutatorReaders, netWriters;
-
-        public ClassSerializer(ObjectMap<String, String> writers, ObjectMap<String, String> readers, ObjectMap<String, String> mutatorReaders, ObjectMap<String, String> netWriters){
-            this.writers = writers;
-            this.readers = readers;
-            this.mutatorReaders = mutatorReaders;
-            this.netWriters = netWriters;
-        }
-
-        public String getNetWriter(String type, String fallback){
-            return netWriters.get(type, writers.get(type, fallback));
+    /** Information about read/write methods for class types.  */
+    class ClassSerializer(val writers: MutableMap<String?, String?>, val readers: MutableMap<String?, String?>, val mutatorReaders: MutableMap<String?, String?>, val netWriters: MutableMap<String?, String?>) {
+        fun getNetWriter(type: String?, fallback: String?): String? {
+            return netWriters[type] ?: (writers[type] ?: fallback.also { writers[type] = fallback }).also { netWriters[type] = fallback }
         }
     }
 }

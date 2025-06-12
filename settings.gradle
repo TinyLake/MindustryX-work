@@ -11,14 +11,28 @@ if(JavaVersion.current().ordinal() < JavaVersion.VERSION_16.ordinal()){
 
 includeBuild("buildPlugins")
 
-include 'core', 'server', 'annotations', 'tools', 'tests'
+include 'core', 'server', 'annotations', 'entityanno', 'tools', 'tests'
 include 'desktop', 'ios'
 
 
 def hasSdk = System.getenv("ANDROID_HOME") != null
 if(System.getenv("JITPACK") == "true") hasSdk = false
 if(hasSdk){
-    include 'android'
+    //include 'android'
 }else{
     println("No Android SDK found. Skipping Android module.")
+}
+include 'entityAnnotations'
+if(!hasProperty("release") && !hasProperty("noLocalArc")){
+    if(new File(rootDir.parent, 'Arc').exists()){
+        println("Compiling with localArc")
+        includeBuild("../Arc")
+    }
+
+    if(new File(rootDir.parent, 'Mindustry-Debug').exists()){
+        include(":debug")
+        project(":debug").projectDir = new File(rootDir.parent, "Mindustry-Debug")
+    }
+}else{
+    println("Not including local repositories.")
 }

@@ -1,10 +1,10 @@
-package mindustry.desktop.steam;
+package mindustry.desktop.steam
 
-public class SVars{
-    public final static int steamID = 1127400;
+object SVars {
+    const val steamID: Int = 1127400
 
-    public static SNet net;
-    public static SStats stats;
-    public static SWorkshop workshop;
-    public static SUser user;
+    lateinit var net: SNet
+    lateinit var stats: SStats
+    lateinit var workshop: SWorkshop
+    lateinit var user: SUser
 }

@@ -14,15 +14,15 @@ sourceSets.main {
 tasks{
     withType<JavaCompile>().configureEach {
         sourceCompatibility = "17"
-        targetCompatibility = "8"
-        options.release = 8
+        targetCompatibility = "17"
+        options.release = 17
         options.encoding = "UTF-8"
         options.compilerArgs.add("-Xlint:deprecation")
         options.isFork = true
     }
     withType<KotlinCompile>().configureEach {
         kotlinOptions {
-            jvmTarget = "1.8"
+            jvmTarget = "17"
         }
     }
 

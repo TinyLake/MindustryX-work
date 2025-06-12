@@ -1,51 +1,52 @@
-package mindustry.desktop.steam;
+package mindustry.desktop.steam
 
-import arc.*;
-import arc.util.*;
-import com.codedisaster.steamworks.*;
-import mindustry.game.EventType.*;
+import arc.Events
+import arc.util.Log
+import arc.util.Timer
+import com.codedisaster.steamworks.SteamID
+import com.codedisaster.steamworks.SteamResult
+import com.codedisaster.steamworks.SteamUserStats
+import com.codedisaster.steamworks.SteamUserStatsCallback
+import mindustry.Vars
+import mindustry.game.EventType.ClientLoadEvent
 
-import static mindustry.Vars.*;
+class SStats : SteamUserStatsCallback {
+    val stats: SteamUserStats = SteamUserStats(this)
 
-public class SStats implements SteamUserStatsCallback{
-    public final SteamUserStats stats = new SteamUserStats(this);
+    private var updated = false
+    private val statSavePeriod = 4 //in minutes
 
-    private boolean updated = false;
-    private int statSavePeriod = 4; //in minutes
+    init {
+        stats.requestCurrentStats()
 
-    public SStats(){
-        stats.requestCurrentStats();
-
-        Events.on(ClientLoadEvent.class, e -> {
-            Timer.schedule(() -> {
-                if(updated){
-                    stats.storeStats();
+        Events.on(ClientLoadEvent::class.java) { e: ClientLoadEvent? ->
+            Timer.schedule({
+                if (updated) {
+                    stats.storeStats()
                 }
-            }, statSavePeriod * 60, statSavePeriod * 60);
-        });
-    }
-
-    public void onUpdate(){
-        this.updated = true;
-    }
-
-    @Override
-    public void onUserStatsReceived(long gameID, SteamID steamID, SteamResult result){
-        service.init();
-
-        if(result != SteamResult.OK){
-            Log.err("Failed to receive steam stats: @", result);
-        }else{
-            Log.info("Received steam stats.");
+            }, (statSavePeriod * 60).toFloat(), (statSavePeriod * 60).toFloat())
         }
     }
 
-    @Override
-    public void onUserStatsStored(long gameID, SteamResult result){
-        Log.info("Stored stats: @", result);
+    fun onUpdate() {
+        this.updated = true
+    }
 
-        if(result == SteamResult.OK){
-            updated = true;
+    override fun onUserStatsReceived(gameID: Long, steamID: SteamID, result: SteamResult) {
+        Vars.service.init()
+
+        if (result != SteamResult.OK) {
+            Log.err("Failed to receive steam stats: @", result)
+        } else {
+            Log.info("Received steam stats.")
+        }
+    }
+
+    override fun onUserStatsStored(gameID: Long, result: SteamResult) {
+        Log.info("Stored stats: @", result)
+
+        if (result == SteamResult.OK) {
+            updated = true
         }
     }
 }
